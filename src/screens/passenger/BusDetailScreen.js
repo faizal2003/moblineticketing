@@ -18,28 +18,29 @@ import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import Entypo from 'react-native-vector-icons/Entypo';
 
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { busService } from '../../services/busService';
 
 const BusDetailScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { busId, busName, departure, destination, departureTime, arrivalTime, price } = route.params || {};
+  const { busId, scheduleId, busName, departure, destination, departureTime, arrivalTime, price } = route.params || {};
 
   const [loading, setLoading] = useState(false);
   const [busDetails, setBusDetails] = useState({
-    id: busId || 'BUS001',
-    name: busName || 'Sinar Jaya Executive',
+    id: busId,
+    name: busName || 'Bus',
     type: 'Executive Class',
-    facilities: ['AC', 'Reclining Seats', 'TV', 'Toilet', 'WiFi', 'Charger'],
-    totalSeats: 40,
-    availableSeats: 24,
+    facilities: [],
+    totalSeats: 0,
+    availableSeats: 0,
     rating: 4.5,
-    reviews: 128,
-    departure: departure || 'Jakarta',
-    destination: destination || 'Bandung',
-    departureTime: departureTime || '08:00',
-    arrivalTime: arrivalTime || '12:00',
-    duration: '4 jam',
-    price: price || 150000,
+    reviews: 0,
+    departure: departure || '',
+    destination: destination || '',
+    departureTime: departureTime || '',
+    arrivalTime: arrivalTime || '',
+    duration: '',
+    price: price || 0,
     policies: [
       'Tiket tidak dapat diubah atau dibatalkan',
       'Check-in minimal 30 menit sebelum keberangkatan',
@@ -48,19 +49,49 @@ const BusDetailScreen = () => {
     ],
   });
 
-  const [selectedFacilities, setSelectedFacilities] = useState([]);
-
   useEffect(() => {
-    // Simulasi fetch data dari API
-    setLoading(true);
-    setTimeout(() => {
+    fetchBusDetails();
+  }, [busId]);
+
+  const fetchBusDetails = async () => {
+    try {
+      setLoading(true);
+      const response = await busService.getBusDetails(busId);
+      const data = response.data.data.bus;
+      
+      // Find the specific schedule if possible
+      const schedule = data.schedules.find(s => s.id === scheduleId) || data.schedules[0];
+
+      setBusDetails({
+        ...busDetails,
+        name: data.name,
+        type: data.type,
+        facilities: data.facilities || [],
+        totalSeats: data.total_seats,
+        availableSeats: schedule ? schedule.available_seats : data.total_seats,
+        departureTime: schedule ? new Date(schedule.departure_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : busDetails.departureTime,
+        arrivalTime: schedule ? new Date(schedule.arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : busDetails.arrivalTime,
+        price: schedule ? schedule.price : busDetails.price,
+        duration: schedule ? calculateDuration(schedule.departure_time, schedule.arrival_time) : '4 jam',
+      });
+    } catch (error) {
+      console.error('Error fetching bus details:', error);
+    } finally {
       setLoading(false);
-    }, 1000);
-  }, []);
+    }
+  };
+
+  const calculateDuration = (start, end) => {
+    const diff = new Date(end) - new Date(start);
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours} jam ${minutes} menit`;
+  };
 
   const handleBookNow = () => {
     navigation.navigate('SeatSelection', {
-      busId: busDetails.id,
+      busId: busId,
+      scheduleId: scheduleId,
       busName: busDetails.name,
       departure: busDetails.departure,
       destination: busDetails.destination,

@@ -72,7 +72,7 @@ const BusListScreen = ({ navigation }) => {
             <Text style={styles.moreFacilities}>+{item.bus.facilities.length - 3}</Text>
           )}
         </View>
-        <Text style={styles.availableSeats}>{item.available_seats} kursi tersedia</Text>
+        <Text style={styles.availableSeats}>{item.available_seats} / {item.bus.total_seats} kursi tersedia</Text>
       </View>
     </TouchableOpacity>
   );

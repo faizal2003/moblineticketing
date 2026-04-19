@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import DatePicker from 'react-native-date-picker';
 import { busService } from '../../services/busService';
 
 export default function PassengerHome({ navigation }) {
@@ -19,8 +20,9 @@ export default function PassengerHome({ navigation }) {
   const [searchParams, setSearchParams] = useState({
     origin: '',
     destination: '',
-    date: new Date().toISOString().split('T')[0],
+    date: new Date(),
   });
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [popularRoutes, setPopularRoutes] = useState([]);
   const [recentBookings, setRecentBookings] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -33,10 +35,7 @@ export default function PassengerHome({ navigation }) {
   const fetchPopularRoutes = async () => {
     try {
       // Fetch popular routes from API
-      const response = await busService.searchBuses({
-        limit: 5,
-        sort_by: 'popularity',
-      });
+      const response = await busService.getPopularRoutes();
       setPopularRoutes(response.data.data);
     } catch (error) {
       console.error('Error fetching popular routes:', error);
@@ -53,21 +52,25 @@ export default function PassengerHome({ navigation }) {
   };
 
   const handleSearch = () => {
-    navigation.navigate('SearchBus', searchParams);
+    navigation.navigate('SearchBus', {
+      departure: searchParams.origin,
+      destination: searchParams.destination,
+      departureDate: searchParams.date.toISOString(),
+    });
   };
 
   const renderPopularRoute = ({ item }) => (
     <TouchableOpacity
       style={styles.routeCard}
       onPress={() => navigation.navigate('SearchBus', {
-        origin: item.origin_city,
-        destination: item.destination_city,
-        date: searchParams.date,
+        departure: item.origin,
+        destination: item.destination,
+        departureDate: searchParams.date.toISOString(),
       })}
     >
       <View style={styles.routeInfo}>
-        <Text style={styles.routeCities}>{item.origin_city} → {item.destination_city}</Text>
-        <Text style={styles.routePrice}>Rp {item.price.toLocaleString()}</Text>
+        <Text style={styles.routeCities}>{item.origin} → {item.destination}</Text>
+        <Text style={styles.routePrice}>{item.formatted_price}</Text>
       </View>
       <Icon name="arrow-forward-ios" size={16} color="#666" />
     </TouchableOpacity>
@@ -76,20 +79,22 @@ export default function PassengerHome({ navigation }) {
   const renderRecentBooking = ({ item }) => (
     <TouchableOpacity
       style={styles.bookingCard}
-      onPress={() => navigation.navigate('TicketDetail', { bookingId: item.id })}
+      onPress={() => navigation.navigate('TicketDetail', { 
+        ticket: { id: item.id } 
+      })}
     >
       <View style={styles.bookingHeader}>
-        <Text style={styles.bookingRoute}>{item.bus?.route}</Text>
+        <Text style={styles.bookingRoute}>{item.schedule?.departure_city} → {item.schedule?.arrival_city}</Text>
         <Text style={[styles.bookingStatus, 
-          item.status === 'confirmed' ? styles.statusConfirmed : styles.statusPending
+          item.booking_status === 'confirmed' ? styles.statusConfirmed : styles.statusPending
         ]}>
-          {item.status}
+          {item.booking_status}
         </Text>
       </View>
       <Text style={styles.bookingDate}>
-        {new Date(item.departure_time).toLocaleDateString()}
+        {new Date(item.schedule?.departure_time).toLocaleDateString()}
       </Text>
-      <Text style={styles.bookingSeats}>Seats: {item.seats.join(', ')}</Text>
+      <Text style={styles.bookingSeats}>Seats: {item.seats?.join(', ') || '-'}</Text>
     </TouchableOpacity>
   );
 
@@ -131,12 +136,14 @@ export default function PassengerHome({ navigation }) {
           
           <View style={styles.searchInputContainer}>
             <Icon name="calendar-today" size={20} color="#1E88E5" style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Date"
-              value={searchParams.date}
-              onChangeText={(text) => setSearchParams({ ...searchParams, date: text })}
-            />
+            <TouchableOpacity 
+              style={styles.searchInput} 
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={{ color: searchParams.date ? '#333' : '#999', fontSize: 16 }}>
+                {searchParams.date.toLocaleDateString('id-ID')}
+              </Text>
+            </TouchableOpacity>
           </View>
 
           <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
@@ -202,6 +209,21 @@ export default function PassengerHome({ navigation }) {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <DatePicker
+        modal
+        open={showDatePicker}
+        date={searchParams.date}
+        mode="date"
+        onConfirm={(date) => {
+          setShowDatePicker(false);
+          setSearchParams({ ...searchParams, date });
+        }}
+        onCancel={() => {
+          setShowDatePicker(false);
+        }}
+        minimumDate={new Date()}
+      />
     </SafeAreaView>
   );
 }

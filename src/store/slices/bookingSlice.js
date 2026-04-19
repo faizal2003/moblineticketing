@@ -3,8 +3,16 @@ import api from '../../services/api';
 
 // Helper untuk API calls
 const bookingAPI = {
-  fetchAvailableBuses: (params) => 
-    api.get('/buses/search', { params }),
+  fetchAvailableBuses: (params) => {
+    // Map mobile params to backend expected keys
+    const mappedParams = {
+      origin: params.departure,
+      destination: params.destination,
+      date: params.departureDate.split('T')[0], // Get YYYY-MM-DD
+      passengers: params.passengers
+    };
+    return api.get('/buses/search', { params: mappedParams });
+  },
   
   selectSeats: (busId, scheduleId) => 
     api.get(`/buses/${busId}/seats`, { params: { schedule_id: scheduleId } }),
@@ -331,7 +339,7 @@ const bookingSlice = createSlice({
       })
       .addCase(fetchAvailableBuses.fulfilled, (state, action) => {
         state.busLoading = false;
-        state.availableBuses = action.payload.buses || [];
+        state.availableBuses = action.payload.data || [];
       })
       .addCase(fetchAvailableBuses.rejected, (state, action) => {
         state.busLoading = false;
@@ -419,6 +427,21 @@ const bookingSlice = createSlice({
         state.bookingLoading = false;
         state.bookingError = action.payload;
       });
+    
+    // Check Seat Availability
+    builder
+      .addCase(checkSeatAvailability.pending, (state) => {
+        state.seatLoading = true;
+        state.seatError = null;
+      })
+      .addCase(checkSeatAvailability.fulfilled, (state, action) => {
+        state.seatLoading = false;
+        state.seatMap = action.payload.data.seat_layout || [];
+      })
+      .addCase(checkSeatAvailability.rejected, (state, action) => {
+        state.seatLoading = false;
+        state.seatError = action.payload;
+      });
   },
 });
 
@@ -458,6 +481,8 @@ export const selectPassengerInfo = (state) => state.booking.passengerInfo;
 export const selectCurrentBooking = (state) => state.booking.currentBooking;
 export const selectBookingHistory = (state) => state.booking.bookingHistory;
 export const selectActiveBooking = (state) => state.booking.activeBooking;
+export const selectHistoryLoading = (state) => state.booking.historyLoading;
+export const selectHistoryError = (state) => state.booking.historyError;
 
 export const selectLoading = (state) => state.booking.loading;
 export const selectError = (state) => state.booking.error;

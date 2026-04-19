@@ -28,6 +28,16 @@ export const busService = {
     return response;
   },
 
+  getBookingDetail: async (bookingId) => {
+    const response = await api.get(`/bookings/${bookingId}`);
+    return response;
+  },
+
+  getPopularRoutes: async () => {
+    const response = await api.get('/buses/popular-routes');
+    return response;
+  },
+
   cancelBooking: async (bookingId) => {
     const response = await api.delete(`/bookings/${bookingId}`);
     return response;

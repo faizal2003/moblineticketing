@@ -15,7 +15,7 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { useDispatch, useSelector } from 'react-redux';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DatePicker from 'react-native-date-picker';
 import {
   updateSearchParams,
   fetchAvailableBuses,
@@ -42,6 +42,7 @@ const SearchBusScreen = ({ navigation }) => {
   });
   
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showReturnDatePicker, setShowReturnDatePicker] = useState(false);
   const [isRoundTrip, setIsRoundTrip] = useState(false);
   const [returnDate, setReturnDate] = useState(new Date());
 
@@ -64,17 +65,22 @@ const SearchBusScreen = ({ navigation }) => {
     });
   };
 
-  const handleDateChange = (event, selectedDate) => {
-    setShowDatePicker(Platform.OS === 'ios');
+  const handleDateChange = (selectedDate) => {
+    setShowDatePicker(false);
     if (selectedDate) {
       setFormData({
         ...formData,
         departureDate: selectedDate,
       });
+      // Ensure return date is not before departure date
+      if (isRoundTrip && returnDate < selectedDate) {
+        setReturnDate(selectedDate);
+      }
     }
   };
 
-  const handleReturnDateChange = (event, selectedDate) => {
+  const handleReturnDateChange = (selectedDate) => {
+    setShowReturnDatePicker(false);
     if (selectedDate) {
       setReturnDate(selectedDate);
     }
@@ -137,7 +143,7 @@ const SearchBusScreen = ({ navigation }) => {
       // Fetch available buses
       const result = await dispatch(fetchAvailableBuses(searchParams)).unwrap();
       
-      if (result.buses && result.buses.length > 0) {
+      if (result.data && result.data.length > 0) {
         // Navigate to bus list
         navigation.navigate('BusList');
       } else {
@@ -306,23 +312,7 @@ const SearchBusScreen = ({ navigation }) => {
                   <Text style={styles.inputLabel}>Tanggal Kembali</Text>
                   <TouchableOpacity
                     style={styles.dateInput}
-                    onPress={() => {
-                      // Show return date picker
-                      Alert.alert(
-                        'Tanggal Kembali',
-                        'Pilih tanggal kembali',
-                        [
-                          { text: 'Batal', style: 'cancel' },
-                          { 
-                            text: 'Pilih', 
-                            onPress: () => {
-                              // You can implement a separate date picker for return
-                              setShowDatePicker(true);
-                            }
-                          },
-                        ]
-                      );
-                    }}
+                    onPress={() => setShowReturnDatePicker(true)}
                   >
                     <Text style={styles.dateText}>
                       {formatDate(returnDate)}
@@ -432,16 +422,32 @@ const SearchBusScreen = ({ navigation }) => {
         </View>
       </ScrollView>
 
-      {/* Date Picker */}
-      {showDatePicker && (
-        <DateTimePicker
-          value={formData.departureDate}
-          mode="date"
-          display="default"
-          onChange={handleDateChange}
-          minimumDate={new Date()}
-        />
-      )}
+      {/* Date Pickers */}
+      <DatePicker
+        modal
+        open={showDatePicker}
+        date={formData.departureDate}
+        mode="date"
+        onConfirm={handleDateChange}
+        onCancel={() => setShowDatePicker(false)}
+        minimumDate={new Date()}
+        title="Pilih Tanggal Berangkat"
+        confirmText="Pilih"
+        cancelText="Batal"
+      />
+
+      <DatePicker
+        modal
+        open={showReturnDatePicker}
+        date={returnDate}
+        mode="date"
+        onConfirm={handleReturnDateChange}
+        onCancel={() => setShowReturnDatePicker(false)}
+        minimumDate={formData.departureDate}
+        title="Pilih Tanggal Kembali"
+        confirmText="Pilih"
+        cancelText="Batal"
+      />
     </SafeAreaView>
   );
 };

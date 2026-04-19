@@ -68,7 +68,7 @@ const PaymentScreen = () => {
   // Booking data from params or Redux
   const bookingData = route.params?.bookingData || {};
   const totalAmount = route.params?.totalAmount || currentBooking.totalAmount || 0;
-  const bookingId = route.params?.bookingId || currentBooking.bookingCode || `BKG${Math.floor(100000 + Math.random() * 900000)}`;
+  const bookingId = route.params?.bookingId || currentBooking.id;
 
   // Default booking data
   const defaultBookingData = {
@@ -225,50 +225,30 @@ const PaymentScreen = () => {
     }
 
     setProcessing(true);
-    
-    if (selectedMethod === 'e_wallet') {
-      setShowQRModal(true);
-    }
 
     try {
       // Prepare payment data
       const paymentData = {
-        bookingId: bookingId,
-        paymentMethod: selectedMethod,
-        amount: booking.total,
+        payment_method: selectedMethod,
+        amount: totalAmount,
         ...(selectedMethod === 'credit_card' && {
-          cardDetails: cardDetails,
-        }),
-        ...(selectedMethod === 'bank_transfer' && {
-          bankCode: '014',
-          accountNumber: '1234567890',
+          card_details: cardDetails,
         }),
       };
 
-      // Update payment info in Redux
-      dispatch(updatePaymentInfo({
-        method: selectedMethod,
-        ...(selectedMethod === 'credit_card' && { ...cardDetails }),
-      }));
-
-      // Simulate API call
-      const result = await dispatch(processPayment(paymentData)).unwrap();
+      // Simulate API call using real thunk
+      await dispatch(processPayment({ 
+        bookingId: bookingId, 
+        paymentData: paymentData 
+      })).unwrap();
       
-      updatePaymentSteps(2);
+      updatePaymentSteps(3);
+      await handlePaymentSuccess();
       
-      if (selectedMethod === 'e_wallet') {
-        // Simulate waiting for QR scan
-        setTimeout(async () => {
-          updatePaymentSteps(3);
-          setShowQRModal(false);
-          await handlePaymentSuccess();
-        }, 3000);
-      } else {
-        await handlePaymentSuccess();
-      }
     } catch (error) {
+      setProcessing(true); // Keep processing state while showing alert if you want, or set to false
       setProcessing(false);
-      Alert.alert('Error', 'Pembayaran gagal. Silakan coba lagi.');
+      Alert.alert('Error', error || 'Pembayaran gagal. Silakan coba lagi.');
     }
   };
 
@@ -276,27 +256,20 @@ const PaymentScreen = () => {
     setProcessing(true);
     
     try {
-      // Update booking status to pending (cash payment)
-      dispatch(updateBookingStatus({
-        bookingId: bookingId,
-        status: 'pending',
-        paymentStatus: 'pending',
-      }));
+      // Prepare payment data for cash (Backend might expect something)
+      const paymentData = {
+        payment_method: 'cash',
+        amount: totalAmount
+      };
 
-      // Refresh booking history
-      await dispatch(fetchBookingHistory()).unwrap();
+      await dispatch(processPayment({ 
+        bookingId: bookingId, 
+        paymentData: paymentData 
+      })).unwrap();
       
       setProcessing(false);
       updatePaymentSteps(3);
-      setShowSuccess(true);
-      
-      setTimeout(() => {
-        navigation.navigate('BookingConfirmation', {
-          bookingId,
-          paymentMethod: 'cash',
-          bookingDetails: booking,
-        });
-      }, 2000);
+      await handlePaymentSuccess();
     } catch (error) {
       setProcessing(false);
       Alert.alert('Error', 'Gagal memproses pembayaran.');
@@ -305,25 +278,15 @@ const PaymentScreen = () => {
 
   const handlePaymentSuccess = async () => {
     setProcessing(false);
-    updatePaymentSteps(3);
-    
-    // Update booking status in Redux
-    dispatch(updateBookingStatus({
-      bookingId: bookingId,
-      status: 'confirmed',
-      paymentStatus: 'paid',
-    }));
-
-    // Refresh booking history
-    await dispatch(fetchBookingHistory()).unwrap();
-    
     setShowSuccess(true);
     
+    // Refresh history
+    dispatch(fetchBookingHistory());
+    
     setTimeout(() => {
-      navigation.navigate('BookingConfirmation', {
-        bookingId,
-        paymentMethod: selectedMethod,
-        bookingDetails: booking,
+      setShowSuccess(false);
+      navigation.navigate('TicketDetail', { 
+        ticket: { id: bookingId } 
       });
       
       // Clear current booking if successful

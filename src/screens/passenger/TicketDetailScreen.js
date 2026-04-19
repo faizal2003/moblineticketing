@@ -26,6 +26,7 @@ import { id } from 'date-fns/locale';
 import ViewShot from 'react-native-view-shot';
 import RNFS from 'react-native-fs';
 import Share from 'react-native-share';
+import { busService } from '../../services/busService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -33,8 +34,10 @@ const TicketDetailScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { ticket } = route.params || {};
+  const bookingId = ticket?.id;
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [currentTicket, setCurrentTicket] = useState(null);
   const [showShareOptions, setShowShareOptions] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
@@ -42,52 +45,62 @@ const TicketDetailScreen = () => {
   const viewShotRef = useRef();
   const slideAnim = useRef(new Animated.Value(0)).current;
 
-  // Fallback ticket data
-  const defaultTicket = {
-    id: 'TKT001',
-    bookingId: 'BKG001',
-    busName: 'Sinar Jaya Executive',
-    busNumber: 'SJ 7890 AB',
-    departure: 'Jakarta',
-    destination: 'Bandung',
-    departureDate: new Date(Date.now() + 86400000 * 2),
-    departureTime: '08:00',
-    arrivalTime: '12:00',
-    passengerCount: 2,
-    seats: ['A1', 'A2'],
-    price: 300000,
-    status: 'confirmed',
-    paymentStatus: 'paid',
-    bookingDate: new Date(Date.now() - 86400000 * 1),
-    boardingPoint: 'Terminal Kampung Rambutan',
-    dropPoint: 'Terminal Leuwi Panjang',
-    bookingClass: 'Executive',
-    facilities: ['AC', 'TV', 'WiFi', 'Toilet', 'Reclining Seats'],
-    qrCode: 'TKT001-QR-CODE',
-    boardingPassUrl: 'https://example.com/boarding-pass',
-    passengerInfo: [
-      {
-        name: 'John Doe',
-        identityNumber: '1234567890123456',
-        phone: '081234567890',
-        email: 'john@example.com',
-      },
-      {
-        name: 'Jane Doe',
-        identityNumber: '1234567890123457',
-        phone: '081234567891',
-        email: 'jane@example.com',
-      },
-    ],
+  useEffect(() => {
+    if (bookingId) {
+      fetchTicketDetails();
+    }
+  }, [bookingId]);
+
+  const fetchTicketDetails = async () => {
+    try {
+      setLoading(true);
+      const response = await busService.getBookingDetail(bookingId);
+      const data = response.data.data;
+      
+      // Transform backend data to currentTicket format
+      setCurrentTicket({
+        id: data.ticket?.ticket_code || 'N/A',
+        bookingId: data.booking_code,
+        busName: data.schedule?.bus_name,
+        busNumber: data.schedule?.bus_number || '-',
+        departure: data.schedule?.departure_city,
+        destination: data.schedule?.arrival_city,
+        departureDate: new Date(data.schedule?.departure_time),
+        departureTime: new Date(data.schedule?.departure_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        arrivalTime: new Date(data.schedule?.arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        passengerCount: data.total_passengers,
+        seats: data.passengers.map(p => p.seat_number),
+        price: parseFloat(data.total_price),
+        status: data.booking_status,
+        paymentStatus: data.payment_status,
+        bookingDate: new Date(data.created_at),
+        boardingPoint: data.schedule?.departure_city,
+        dropPoint: data.schedule?.arrival_city,
+        bookingClass: data.schedule?.bus_type || 'Executive',
+        facilities: data.schedule?.facilities || [],
+        qrCode: data.ticket?.ticket_code || '-',
+        passengerInfo: data.passengers.map(p => ({
+          name: p.full_name,
+          identityNumber: p.id_number,
+          phone: p.phone,
+          email: '-',
+        })),
+      });
+    } catch (error) {
+      console.error('Error fetching ticket details:', error);
+      Alert.alert('Error', 'Gagal memuat detail tiket');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const currentTicket = ticket || defaultTicket;
-
   const formatDate = (date) => {
+    if (!date) return '-';
     return format(date, 'EEEE, d MMMM yyyy', { locale: id });
   };
 
   const formatTime = (time) => {
+    if (!time) return '-';
     return `${time} WIB`;
   };
 
@@ -287,6 +300,29 @@ const TicketDetailScreen = () => {
       </View>
     </View>
   );
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#1E88E5" />
+        <Text style={styles.loadingText}>Memuat detail tiket...</Text>
+      </View>
+    );
+  }
+
+  if (!currentTicket) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Tiket tidak ditemukan</Text>
+        <TouchableOpacity 
+          style={styles.primaryButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.primaryButtonText}>Kembali</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
