@@ -253,6 +253,7 @@ const SearchBusScreen = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="Kota keberangkatan"
+                placeholderTextColor="#999"
                 value={formData.departure}
                 onChangeText={(text) => handleInputChange('departure', text)}
                 autoCapitalize="words"
@@ -273,6 +274,7 @@ const SearchBusScreen = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="Kota tujuan"
+                placeholderTextColor="#999"
                 value={formData.destination}
                 onChangeText={(text) => handleInputChange('destination', text)}
                 autoCapitalize="words"

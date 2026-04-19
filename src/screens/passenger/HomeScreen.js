@@ -16,6 +16,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import DatePicker from 'react-native-date-picker';
 import { busService } from '../../services/busService';
+import { logout } from '../../store/slices/authSlice';
 import { 
   updateSearchParams, 
   fetchAvailableBuses, 
@@ -57,6 +58,21 @@ export default function PassengerHome({ navigation }) {
     } catch (error) {
       console.error('Error fetching recent bookings:', error);
     }
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Logout', 
+          onPress: () => dispatch(logout()),
+          style: 'destructive'
+        },
+      ]
+    );
   };
 
   const handleSearch = async () => {
@@ -170,9 +186,14 @@ export default function PassengerHome({ navigation }) {
             <Text style={styles.greeting}>Hello, {user?.name}</Text>
             <Text style={styles.subGreeting}>Where do you want to go?</Text>
           </View>
-          <TouchableOpacity onPress={() => navigation.navigate('MyTickets')}>
-            <Icon name="confirmation-number" size={28} color="#1E88E5" />
-          </TouchableOpacity>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity onPress={() => navigation.navigate('MyTickets')} style={styles.headerIcon}>
+              <Icon name="confirmation-number" size={28} color="#1E88E5" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleLogout} style={styles.headerIcon}>
+              <Icon name="logout" size={28} color="#F44336" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Search Section */}
@@ -182,6 +203,7 @@ export default function PassengerHome({ navigation }) {
             <TextInput
               style={styles.searchInput}
               placeholder="From"
+              placeholderTextColor="#999"
               value={searchParams.origin}
               onChangeText={(text) => setSearchParams({ ...searchParams, origin: text })}
             />
@@ -192,6 +214,7 @@ export default function PassengerHome({ navigation }) {
             <TextInput
               style={styles.searchInput}
               placeholder="To"
+              placeholderTextColor="#999"
               value={searchParams.destination}
               onChangeText={(text) => setSearchParams({ ...searchParams, destination: text })}
             />
@@ -311,6 +334,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 10,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerIcon: {
+    marginLeft: 15,
   },
   greeting: {
     fontSize: 24,

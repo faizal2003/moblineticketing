@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,48 +7,45 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
+  ActivityIndicator,
+  FlatList,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../../store/slices/authSlice';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { conductorService } from '../../services/conductorService';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function ConductorHome({ navigation }) {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
-  const [todaySchedule, setTodaySchedule] = useState(null);
-  const [passengerList, setPassengerList] = useState([]);
+  const [schedules, setSchedules] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchTodaySchedule();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchTodaySchedule();
+    }, [])
+  );
 
   const fetchTodaySchedule = async () => {
     try {
       setLoading(true);
       const response = await conductorService.getTodaySchedule();
-      setTodaySchedule(response.data.schedule);
-      
-      if (response.data.schedule) {
-        fetchPassengerList(response.data.schedule.id);
-      }
+      // Backend returns array of schedules in response.data.data
+      const data = response.data?.data || [];
+      console.log('Conductor schedules loaded:', data.length);
+      setSchedules(data);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load schedule');
+      console.error('Error fetching schedule:', error);
+      // Don't show alert every time to avoid annoying user if network is flaky
+      // but log it for debugging
     } finally {
       setLoading(false);
       setRefreshing(false);
-    }
-  };
-
-  const fetchPassengerList = async (scheduleId) => {
-    try {
-      const response = await conductorService.getPassengerList(scheduleId);
-      setPassengerList(response.data.passengers);
-    } catch (error) {
-      console.error('Error fetching passenger list:', error);
     }
   };
 
@@ -72,199 +69,124 @@ export default function ConductorHome({ navigation }) {
     );
   };
 
-  const handleScanTicket = () => {
-    navigation.navigate('ScanTicket', {
-      scheduleId: todaySchedule?.id,
-    });
-  };
-
-  const handlePassengerStatus = async (passengerId, currentStatus) => {
-    const newStatus = currentStatus === 'checked_in' ? 'not_checked' : 'checked_in';
-    
-    try {
-      await conductorService.updatePassengerStatus(passengerId, newStatus);
-      // Refresh passenger list
-      fetchPassengerList(todaySchedule.id);
-      Alert.alert('Success', `Passenger status updated to ${newStatus}`);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update passenger status');
-    }
-  };
-
-  const renderPassengerItem = ({ item }) => (
-    <View style={styles.passengerCard}>
-      <View style={styles.passengerInfo}>
-        <Text style={styles.passengerName}>{item.passenger_name}</Text>
-        <Text style={styles.passengerDetails}>
-          Seat: {item.seat_number} • Ticket: {item.ticket_code}
-        </Text>
+  const renderScheduleItem = ({ item }) => (
+    <TouchableOpacity 
+      style={styles.scheduleCard}
+      onPress={() => navigation.navigate('PassengerList', { scheduleId: item.id })}
+    >
+      <View style={styles.scheduleHeader}>
+        <View style={styles.busInfoContainer}>
+          <Icon name="directions-bus" size={24} color="#1E88E5" />
+          <View style={styles.busTextContainer}>
+            <Text style={styles.busName}>{item.bus?.name || 'Bus'}</Text>
+            <Text style={styles.busNumber}>{item.bus?.number || '-'} • {item.bus?.plate_number || '-'}</Text>
+          </View>
+        </View>
+        <View style={[styles.statusBadge, item.status === 'active' ? styles.statusActive : styles.statusInactive]}>
+          <Text style={styles.statusText}>{item.status?.toUpperCase() || 'UNKNOWN'}</Text>
+        </View>
       </View>
-      <TouchableOpacity
-        style={[
-          styles.statusButton,
-          item.status === 'checked_in' ? styles.statusChecked : styles.statusNotChecked,
-        ]}
-        onPress={() => handlePassengerStatus(item.id, item.status)}
-      >
-        <Text style={[
-          styles.statusButtonText,
-          item.status === 'checked_in' ? styles.statusButtonTextChecked : styles.statusButtonTextNotChecked,
-        ]}>
-          {item.status === 'checked_in' ? 'Checked' : 'Check In'}
-        </Text>
-      </TouchableOpacity>
-    </View>
+      
+      <View style={styles.routeInfo}>
+        <View style={styles.location}>
+          <Text style={styles.locationTime}>
+            {item.departure_time ? new Date(item.departure_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+          </Text>
+          <Text style={styles.locationCity}>{item.departure_city}</Text>
+        </View>
+        
+        <View style={styles.routeLine}>
+          <View style={styles.line} />
+          <Icon name="arrow-forward" size={20} color="#666" />
+          <View style={styles.line} />
+        </View>
+        
+        <View style={styles.location}>
+          <Text style={styles.locationTime}>
+            {item.arrival_time ? new Date(item.arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+          </Text>
+          <Text style={styles.locationCity}>{item.arrival_city}</Text>
+        </View>
+      </View>
+      
+      <View style={styles.scheduleFooter}>
+        <View style={styles.statItem}>
+          <Icon name="people" size={18} color="#666" />
+          <Text style={styles.statText}>{item.total_passengers || 0} Terdaftar</Text>
+        </View>
+        <View style={styles.statItem}>
+          <Icon name="check-circle" size={18} color="#4CAF50" />
+          <Text style={styles.statText}>{item.boarded_passengers || 0} Sudah Naik</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
   );
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text>Loading schedule...</Text>
-      </View>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
+      
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Welcome, {user?.name}</Text>
-          <Text style={styles.role}>Conductor</Text>
+          <Text style={styles.greeting}>Halo, {user?.name}</Text>
+          <Text style={styles.role}>Kondektur Dashboard</Text>
         </View>
-        <TouchableOpacity onPress={handleLogout}>
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
           <Icon name="logout" size={24} color="#F44336" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {/* Today's Schedule Card */}
-        {todaySchedule ? (
-          <View style={styles.scheduleCard}>
-            <View style={styles.scheduleHeader}>
-              <Icon name="directions-bus" size={24} color="#1E88E5" />
-              <Text style={styles.scheduleTitle}>Today's Schedule</Text>
-            </View>
-            
-            <View style={styles.scheduleDetails}>
-              <View style={styles.routeInfo}>
-                <View style={styles.location}>
-                  <Text style={styles.locationTime}>
-                    {new Date(todaySchedule.departure_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </Text>
-                  <Text style={styles.locationCity}>{todaySchedule.origin_city}</Text>
-                </View>
-                
-                <View style={styles.routeLine}>
-                  <View style={styles.line} />
-                  <Icon name="arrow-forward" size={20} color="#666" />
-                  <View style={styles.line} />
-                </View>
-                
-                <View style={styles.location}>
-                  <Text style={styles.locationTime}>
-                    {new Date(todaySchedule.arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </Text>
-                  <Text style={styles.locationCity}>{todaySchedule.destination_city}</Text>
-                </View>
-              </View>
-              
-              <View style={styles.busInfo}>
-                <Text style={styles.busNumber}>Bus: {todaySchedule.bus?.bus_number}</Text>
-                <Text style={styles.driverName}>Driver: {todaySchedule.bus?.driver_name}</Text>
-              </View>
-            </View>
+      <View style={styles.content}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Jadwal Hari Ini</Text>
+          <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
+            <Icon name="refresh" size={22} color="#1E88E5" />
+          </TouchableOpacity>
+        </View>
+
+        {loading && !refreshing ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#1E88E5" />
+            <Text style={styles.loadingText}>Memuat jadwal...</Text>
           </View>
         ) : (
-          <View style={styles.noScheduleCard}>
-            <Icon name="event-busy" size={48} color="#9E9E9E" />
-            <Text style={styles.noScheduleText}>No schedule for today</Text>
-            <Text style={styles.noScheduleSubtext}>Check back later</Text>
-          </View>
-        )}
-
-        {/* Quick Actions */}
-        {todaySchedule && (
-          <View style={styles.quickActions}>
-            <TouchableOpacity style={styles.quickActionCard} onPress={handleScanTicket}>
-              <View style={[styles.quickActionIcon, { backgroundColor: '#E3F2FD' }]}>
-                <Icon name="qr-code-scanner" size={32} color="#1E88E5" />
-              </View>
-              <Text style={styles.quickActionText}>Scan Ticket</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.quickActionCard}
-              onPress={() => navigation.navigate('PassengerList', { scheduleId: todaySchedule.id })}
-            >
-              <View style={[styles.quickActionIcon, { backgroundColor: '#E8F5E8' }]}>
-                <Icon name="people" size={32} color="#388E3C" />
-              </View>
-              <Text style={styles.quickActionText}>Passenger List</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Passenger List Preview */}
-        {passengerList.length > 0 && (
-          <View style={styles.passengerSection}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Passengers ({passengerList.length})</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('PassengerList', { scheduleId: todaySchedule.id })}>
-                <Text style={styles.seeAll}>View All</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <View style={styles.passengerStats}>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>
-                  {passengerList.filter(p => p.status === 'checked_in').length}
+          <FlatList
+            data={schedules}
+            renderItem={renderScheduleItem}
+            keyExtractor={(item) => item.id.toString()}
+            contentContainerStyle={styles.listContainer}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            ListEmptyComponent={
+              <View style={styles.noScheduleCard}>
+                <Icon name="event-busy" size={60} color="#CCC" />
+                <Text style={styles.noScheduleText}>Tidak ada jadwal hari ini</Text>
+                <Text style={styles.noScheduleSubtext}>
+                  Geser ke bawah untuk menyegarkan halaman atau hubungi admin.
                 </Text>
-                <Text style={styles.statLabel}>Checked In</Text>
+                <TouchableOpacity style={styles.scanEmptyButton} onPress={() => navigation.navigate('ScanTicket')}>
+                  <Icon name="qr-code-scanner" size={24} color="#FFF" />
+                  <Text style={styles.scanEmptyButtonText}>Scan Tiket Saja</Text>
+                </TouchableOpacity>
               </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>
-                  {passengerList.filter(p => p.status === 'not_checked').length}
-                </Text>
-                <Text style={styles.statLabel}>Pending</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{passengerList.length}</Text>
-                <Text style={styles.statLabel}>Total</Text>
-              </View>
-            </View>
-            
-            {/* Sample passenger list (show first 3) */}
-            {passengerList.slice(0, 3).map((passenger) => (
-              <View key={passenger.id} style={styles.passengerCard}>
-                <View style={styles.passengerInfo}>
-                  <Text style={styles.passengerName}>{passenger.passenger_name}</Text>
-                  <Text style={styles.passengerDetails}>
-                    Seat: {passenger.seat_number} • {passenger.ticket_code}
-                  </Text>
-                </View>
-                <View style={[
-                  styles.statusBadge,
-                  passenger.status === 'checked_in' ? styles.statusCheckedBadge : styles.statusPendingBadge,
-                ]}>
-                  <Text style={[
-                    styles.statusBadgeText,
-                    passenger.status === 'checked_in' ? styles.statusBadgeTextChecked : styles.statusBadgeTextPending,
-                  ]}>
-                    {passenger.status === 'checked_in' ? '✓ Checked' : 'Pending'}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
+            }
+          />
         )}
-      </ScrollView>
+      </View>
+
+      {/* Floating Action Button (Always shown if not loading) */}
+      {!loading && (
+        <TouchableOpacity 
+          style={styles.fab}
+          onPress={() => navigation.navigate('ScanTicket')}
+          activeOpacity={0.8}
+        >
+          <Icon name="qr-code-scanner" size={28} color="#FFF" />
+          <Text style={styles.fabText}>Scan Tiket</Text>
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 }
@@ -272,112 +194,182 @@ export default function ConductorHome({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F9FA',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loadingText: {
+    marginTop: 12,
+    color: '#666',
+    fontSize: 16,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    paddingVertical: 15,
+    backgroundColor: '#FFFFFF',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
   greeting: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
   },
   role: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 12,
+    color: '#1E88E5',
+    fontWeight: '600',
     marginTop: 2,
+    textTransform: 'uppercase',
+  },
+  logoutButton: {
+    padding: 8,
+  },
+  content: {
+    flex: 1,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  refreshButton: {
+    padding: 4,
+  },
+  listContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 100,
   },
   scheduleCard: {
-    margin: 20,
-    padding: 20,
     backgroundColor: '#FFFFFF',
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#1E88E5',
   },
   scheduleHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
-  scheduleTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+  busInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  busTextContainer: {
     marginLeft: 10,
   },
-  scheduleDetails: {
-    marginTop: 10,
+  busName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  busNumber: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  statusActive: {
+    backgroundColor: '#E8F5E8',
+  },
+  statusInactive: {
+    backgroundColor: '#FFEBEE',
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#333',
   },
   routeInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: '#F1F3F4',
+    borderRadius: 8,
   },
   location: {
     flex: 1,
     alignItems: 'center',
   },
   locationTime: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
   },
   locationCity: {
-    fontSize: 14,
+    fontSize: 11,
     color: '#666',
-    marginTop: 5,
+    marginTop: 4,
+    textAlign: 'center',
   },
   routeLine: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 2,
+    flex: 0.8,
     justifyContent: 'center',
   },
   line: {
     flex: 1,
-    height: 2,
-    backgroundColor: '#E0E0E0',
+    height: 1,
+    backgroundColor: '#CCC',
   },
-  busInfo: {
+  scheduleFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingTop: 15,
+    paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    borderTopColor: '#EEE',
   },
-  busNumber: {
-    fontSize: 14,
-    color: '#666',
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  driverName: {
-    fontSize: 14,
+  statText: {
+    fontSize: 12,
     color: '#666',
+    marginLeft: 6,
   },
   noScheduleCard: {
-    margin: 20,
     padding: 40,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 15,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 40,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    marginHorizontal: 10,
+    elevation: 2,
   },
   noScheduleText: {
     fontSize: 18,
@@ -387,140 +379,45 @@ const styles = StyleSheet.create({
   },
   noScheduleSubtext: {
     fontSize: 14,
-    color: '#9E9E9E',
-    marginTop: 5,
-  },
-  quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 20,
-    marginBottom: 30,
-  },
-  quickActionCard: {
-    alignItems: 'center',
-    width: '45%',
-  },
-  quickActionIcon: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  quickActionText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    color: '#999',
+    marginTop: 8,
     textAlign: 'center',
+    lineHeight: 20,
   },
-  passengerSection: {
+  scanEmptyButton: {
+    backgroundColor: '#1E88E5',
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    marginTop: 25,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  sectionTitle: {
-    fontSize: 18,
+  scanEmptyButtonText: {
+    color: '#FFF',
     fontWeight: 'bold',
-    color: '#333',
+    marginLeft: 10,
   },
-  seeAll: {
-    color: '#1E88E5',
-    fontSize: 14,
-  },
-  passengerStats: {
-    flexDirection: 'row',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 20,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 5,
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: '#E0E0E0',
-  },
-  passengerCard: {
+  fab: {
+    position: 'absolute',
+    bottom: 30,
+    right: 25,
+    backgroundColor: '#1E88E5',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+    borderRadius: 35,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
   },
-  passengerInfo: {
-    flex: 1,
-  },
-  passengerName: {
+  fabText: {
+    color: '#FFF',
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  passengerDetails: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
-  },
-  statusCheckedBadge: {
-    backgroundColor: '#E8F5E8',
-  },
-  statusPendingBadge: {
-    backgroundColor: '#FFF3E0',
-  },
-  statusBadgeText: {
-    fontSize: 12,
     fontWeight: 'bold',
-  },
-  statusBadgeTextChecked: {
-    color: '#388E3C',
-  },
-  statusBadgeTextPending: {
-    color: '#F57C00',
-  },
-  statusButton: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  statusChecked: {
-    backgroundColor: '#E8F5E8',
-  },
-  statusNotChecked: {
-    backgroundColor: '#FFF3E0',
-  },
-  statusButtonText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  statusButtonTextChecked: {
-    color: '#388E3C',
-  },
-  statusButtonTextNotChecked: {
-    color: '#F57C00',
+    marginLeft: 10,
   },
 });

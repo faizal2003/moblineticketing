@@ -430,6 +430,7 @@ const PaymentScreen = () => {
             <TextInput
               style={styles.cardInput}
               placeholder="Nomor Kartu"
+              placeholderTextColor="#999"
               value={cardDetails.cardNumber}
               onChangeText={(text) => setCardDetails({...cardDetails, cardNumber: text})}
               keyboardType="numeric"
@@ -440,6 +441,7 @@ const PaymentScreen = () => {
               <TextInput
                 style={[styles.cardInput, { flex: 2 }]}
                 placeholder="MM/YY"
+                placeholderTextColor="#999"
                 value={cardDetails.cardExpiry}
                 onChangeText={(text) => setCardDetails({...cardDetails, cardExpiry: text})}
                 maxLength={5}
@@ -447,6 +449,7 @@ const PaymentScreen = () => {
               <TextInput
                 style={[styles.cardInput, { flex: 1, marginLeft: 8 }]}
                 placeholder="CVC"
+                placeholderTextColor="#999"
                 value={cardDetails.cardCVC}
                 onChangeText={(text) => setCardDetails({...cardDetails, cardCVC: text})}
                 keyboardType="numeric"
@@ -457,6 +460,7 @@ const PaymentScreen = () => {
             <TextInput
               style={styles.cardInput}
               placeholder="Nama Pemegang Kartu"
+              placeholderTextColor="#999"
               value={cardDetails.cardName}
               onChangeText={(text) => setCardDetails({...cardDetails, cardName: text})}
               autoCapitalize="words"

@@ -298,6 +298,7 @@ const BookingScreen = () => {
       <TextInput
         style={[styles.input, validationErrors[isMain ? 'fullName' : `passenger_${index}_name`] && styles.inputError]}
         placeholder="Nama Lengkap"
+        placeholderTextColor="#999"
         value={isMain ? formData.fullName : passenger.name}
         onChangeText={(text) => isMain 
           ? handleInputChange('fullName', text)
@@ -314,6 +315,7 @@ const BookingScreen = () => {
         <TextInput
           style={[styles.input, styles.identityInput, validationErrors[isMain ? 'identityNumber' : `passenger_${index}_identity`] && styles.inputError]}
           placeholder="Nomor Identitas"
+          placeholderTextColor="#999"
           value={isMain ? formData.identityNumber : passenger.identityNumber}
           onChangeText={(text) => isMain 
             ? handleInputChange('identityNumber', text)
@@ -555,6 +557,7 @@ const BookingScreen = () => {
               <TextInput
                 style={[styles.input, validationErrors.email && styles.inputError]}
                 placeholder="Email"
+                placeholderTextColor="#999"
                 value={formData.email}
                 onChangeText={(text) => handleInputChange('email', text)}
                 keyboardType="email-address"
@@ -567,6 +570,7 @@ const BookingScreen = () => {
               <TextInput
                 style={[styles.input, validationErrors.phone && styles.inputError]}
                 placeholder="Nomor Telepon"
+                placeholderTextColor="#999"
                 value={formData.phone}
                 onChangeText={(text) => handleInputChange('phone', text)}
                 keyboardType="phone-pad"
@@ -578,6 +582,7 @@ const BookingScreen = () => {
               <TextInput
                 style={styles.input}
                 placeholder="Titik Penjemputan (Opsional)"
+                placeholderTextColor="#999"
                 value={formData.pickupPoint}
                 onChangeText={(text) => handleInputChange('pickupPoint', text)}
               />
@@ -585,6 +590,7 @@ const BookingScreen = () => {
               <TextInput
                 style={styles.input}
                 placeholder="Titik Penurunan (Opsional)"
+                placeholderTextColor="#999"
                 value={formData.dropPoint}
                 onChangeText={(text) => handleInputChange('dropPoint', text)}
               />
@@ -592,6 +598,7 @@ const BookingScreen = () => {
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Permintaan Khusus (Opsional)"
+                placeholderTextColor="#999"
                 value={formData.specialRequests}
                 onChangeText={(text) => handleInputChange('specialRequests', text)}
                 multiline

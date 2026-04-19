@@ -89,6 +89,7 @@ export default function RegisterScreen({ navigation }) {
             <TextInput
               style={styles.input}
               placeholder="Full Name"
+              placeholderTextColor="#999"
               value={formData.name}
               onChangeText={(text) => setFormData({ ...formData, name: text })}
             />
@@ -100,6 +101,7 @@ export default function RegisterScreen({ navigation }) {
             <TextInput
               style={styles.input}
               placeholder="Email"
+              placeholderTextColor="#999"
               value={formData.email}
               onChangeText={(text) => setFormData({ ...formData, email: text })}
               keyboardType="email-address"
@@ -113,6 +115,7 @@ export default function RegisterScreen({ navigation }) {
             <TextInput
               style={styles.input}
               placeholder="Phone Number"
+              placeholderTextColor="#999"
               value={formData.phone}
               onChangeText={(text) => setFormData({ ...formData, phone: text })}
               keyboardType="phone-pad"
@@ -125,6 +128,7 @@ export default function RegisterScreen({ navigation }) {
             <TextInput
               style={[styles.input, { flex: 1 }]}
               placeholder="Password"
+              placeholderTextColor="#999"
               value={formData.password}
               onChangeText={(text) => setFormData({ ...formData, password: text })}
               secureTextEntry={!showPassword}
@@ -144,6 +148,7 @@ export default function RegisterScreen({ navigation }) {
             <TextInput
               style={styles.input}
               placeholder="Confirm Password"
+              placeholderTextColor="#999"
               value={formData.password_confirmation}
               onChangeText={(text) => setFormData({ ...formData, password_confirmation: text })}
               secureTextEntry={!showPassword}
