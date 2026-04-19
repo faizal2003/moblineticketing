@@ -366,6 +366,7 @@ const bookingSlice = createSlice({
             id: bookingData.booking_id || bookingData.id,
             booking_code: bookingData.booking_code,
             total_price: bookingData.total_price,
+            totalAmount: parseFloat(bookingData.total_price), // Alias for frontend compatibility
             total_passengers: bookingData.total_passengers,
             booking_status: bookingData.booking_status,
             payment_status: bookingData.payment_status,
@@ -399,14 +400,24 @@ const bookingSlice = createSlice({
         state.error = null;
         state.success = false;
       })
-      .addCase(processPayment.fulfilled, (state) => {
+      .addCase(processPayment.fulfilled, (state, action) => {
         state.loading = false;
         state.success = true;
         state.lastUpdated = new Date().toISOString();
         
-        // Logika khusus untuk fulfilled
+        // Update current booking state
+        state.currentBooking.payment_status = 'paid';
+        state.currentBooking.booking_status = 'confirmed';
         state.currentBooking.paymentStatus = 'paid';
         state.currentBooking.status = 'confirmed';
+        
+        // Update in history too
+        const bookingId = state.currentBooking.id;
+        state.bookingHistory = state.bookingHistory.map(booking => 
+          booking.id === bookingId 
+            ? { ...booking, booking_status: 'confirmed', payment_status: 'paid' }
+            : booking
+        );
       })
       .addCase(processPayment.rejected, (state, action) => {
         state.loading = false;
