@@ -446,8 +446,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   facilitiesList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    paddingBottom: 8,
   },
   facilityItem: {
     flexDirection: 'row',

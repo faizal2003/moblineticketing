@@ -5,17 +5,25 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   Image,
   TextInput,
   FlatList,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
-import { useSelector } from 'react-redux';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSelector, useDispatch } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import DatePicker from 'react-native-date-picker';
 import { busService } from '../../services/busService';
+import { 
+  updateSearchParams, 
+  fetchAvailableBuses, 
+  clearSearchResults 
+} from '../../store/slices/bookingSlice';
 
 export default function PassengerHome({ navigation }) {
+  const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const [searchParams, setSearchParams] = useState({
     origin: '',
@@ -25,7 +33,7 @@ export default function PassengerHome({ navigation }) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [popularRoutes, setPopularRoutes] = useState([]);
   const [recentBookings, setRecentBookings] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     fetchPopularRoutes();
@@ -51,22 +59,77 @@ export default function PassengerHome({ navigation }) {
     }
   };
 
-  const handleSearch = () => {
-    navigation.navigate('SearchBus', {
-      departure: searchParams.origin,
-      destination: searchParams.destination,
-      departureDate: searchParams.date.toISOString(),
-    });
+  const handleSearch = async () => {
+    if (!searchParams.origin || !searchParams.destination) {
+      Alert.alert('Error', 'Silakan pilih kota asal dan tujuan');
+      return;
+    }
+
+    if (searchParams.origin.toLowerCase() === searchParams.destination.toLowerCase()) {
+      Alert.alert('Error', 'Kota asal dan tujuan tidak boleh sama');
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const params = {
+        departure: searchParams.origin,
+        destination: searchParams.destination,
+        departureDate: searchParams.date.toISOString(),
+        passengers: 1,
+      };
+
+      // Update search params in Redux
+      dispatch(updateSearchParams(params));
+      
+      // Clear previous results
+      dispatch(clearSearchResults());
+
+      // Fetch available buses
+      const result = await dispatch(fetchAvailableBuses(params)).unwrap();
+      
+      if (result.data && result.data.length > 0) {
+        navigation.navigate('BusList');
+      } else {
+        Alert.alert(
+          'Tidak Ditemukan',
+          'Tidak ada bus yang tersedia untuk rute dan tanggal tersebut.'
+        );
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      Alert.alert('Error', 'Gagal mencari bus. Silakan coba lagi.');
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const renderPopularRoute = ({ item }) => (
     <TouchableOpacity
       style={styles.routeCard}
-      onPress={() => navigation.navigate('SearchBus', {
-        departure: item.origin,
-        destination: item.destination,
-        departureDate: searchParams.date.toISOString(),
-      })}
+      onPress={async () => {
+        setIsSearching(true);
+        try {
+          const params = {
+            departure: item.origin,
+            destination: item.destination,
+            departureDate: searchParams.date.toISOString(),
+            passengers: 1,
+          };
+          dispatch(updateSearchParams(params));
+          dispatch(clearSearchResults());
+          const result = await dispatch(fetchAvailableBuses(params)).unwrap();
+          if (result.data && result.data.length > 0) {
+            navigation.navigate('BusList');
+          } else {
+            Alert.alert('Tidak Ditemukan', 'Tidak ada bus tersedia untuk rute ini.');
+          }
+        } catch (error) {
+          Alert.alert('Error', 'Gagal mencari bus.');
+        } finally {
+          setIsSearching(false);
+        }
+      }}
     >
       <View style={styles.routeInfo}>
         <Text style={styles.routeCities}>{item.origin} → {item.destination}</Text>
@@ -146,8 +209,16 @@ export default function PassengerHome({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-            <Text style={styles.searchButtonText}>Search Bus</Text>
+          <TouchableOpacity 
+            style={[styles.searchButton, isSearching && { backgroundColor: '#90CAF9' }]} 
+            onPress={handleSearch}
+            disabled={isSearching}
+          >
+            {isSearching ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.searchButtonText}>Search Bus</Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -162,7 +233,7 @@ export default function PassengerHome({ navigation }) {
           <FlatList
             data={popularRoutes}
             renderItem={renderPopularRoute}
-            keyExtractor={(item) => item.id.toString()}
+            keyExtractor={(item, index) => item.id?.toString() || index.toString()}
             scrollEnabled={false}
           />
         </View>
@@ -179,7 +250,7 @@ export default function PassengerHome({ navigation }) {
             <FlatList
               data={recentBookings}
               renderItem={renderRecentBooking}
-              keyExtractor={(item) => item.id.toString()}
+              keyExtractor={(item, index) => item.id?.toString() || index.toString()}
               scrollEnabled={false}
             />
           </View>

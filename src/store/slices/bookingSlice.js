@@ -358,16 +358,32 @@ const bookingSlice = createSlice({
         state.success = true;
         state.lastUpdated = new Date().toISOString();
         
-        // Logika khusus untuk fulfilled
-        state.currentBooking = {
-          ...state.currentBooking,
-          ...action.payload.booking,
-          bookingDate: new Date().toISOString(),
-        };
-        
-        // Tambahkan ke history jika ada booking data
-        if (action.payload.booking) {
-          state.bookingHistory.unshift(action.payload.booking);
+        // Backend returns booking data in the 'data' field
+        const bookingData = action.payload.data;
+        if (bookingData) {
+          // Store with backend consistent naming (snake_case)
+          const newBooking = {
+            id: bookingData.booking_id || bookingData.id,
+            booking_code: bookingData.booking_code,
+            total_price: bookingData.total_price,
+            total_passengers: bookingData.total_passengers,
+            booking_status: bookingData.booking_status,
+            payment_status: bookingData.payment_status,
+            created_at: new Date().toISOString(),
+            // Mock schedule for immediate display if not provided
+            schedule: bookingData.schedule || state.selectedBus?.schedule || {
+              bus_name: state.selectedBus?.name,
+              departure_city: state.selectedBus?.departure,
+              arrival_city: state.selectedBus?.destination,
+              departure_time: state.selectedBus?.departureTime,
+            },
+            seats: bookingData.seats || state.selectedSeats,
+          };
+          
+          state.currentBooking = newBooking;
+          
+          // Add to history
+          state.bookingHistory.unshift(newBooking);
         }
       })
       .addCase(createBooking.rejected, (state, action) => {
@@ -406,7 +422,7 @@ const bookingSlice = createSlice({
       })
       .addCase(fetchBookingHistory.fulfilled, (state, action) => {
         state.historyLoading = false;
-        state.bookingHistory = action.payload.bookings || [];
+        state.bookingHistory = action.payload.data || [];
       })
       .addCase(fetchBookingHistory.rejected, (state, action) => {
         state.historyLoading = false;
@@ -421,7 +437,7 @@ const bookingSlice = createSlice({
       })
       .addCase(fetchBookingDetail.fulfilled, (state, action) => {
         state.bookingLoading = false;
-        state.activeBooking = action.payload.booking;
+        state.activeBooking = action.payload.data;
       })
       .addCase(fetchBookingDetail.rejected, (state, action) => {
         state.bookingLoading = false;
@@ -488,9 +504,7 @@ export const selectLoading = (state) => state.booking.loading;
 export const selectError = (state) => state.booking.error;
 export const selectSuccess = (state) => state.booking.success;
 
-// Placeholder for selectPaymentInfo if needed by screens
-export const selectPaymentInfo = (state) => ({
-  method: state.booking.currentBooking.paymentMethod,
-});
+// Memoize or simplify to avoid new reference if possible
+export const selectPaymentInfo = (state) => state.booking.currentBooking.paymentMethod;
 
 export default bookingSlice.reducer;

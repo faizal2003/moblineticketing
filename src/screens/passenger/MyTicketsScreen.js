@@ -123,6 +123,8 @@ const MyTicketsScreen = () => {
         return '#F44336';
       case 'completed':
         return '#2196F3';
+      case 'expired':
+        return '#757575';
       default:
         return '#757575';
     }
@@ -138,22 +140,26 @@ const MyTicketsScreen = () => {
         return 'Dibatalkan';
       case 'completed':
         return 'Selesai';
+      case 'expired':
+        return 'Kadaluarsa';
       default:
         return status;
     }
   };
 
   const getFilteredTickets = () => {
+    if (!bookingHistory || !Array.isArray(bookingHistory)) return [];
+    
     let filtered = [...bookingHistory];
     
     // Filter by active/history tab
     if (activeTab === 'active') {
       filtered = filtered.filter(ticket => 
-        ticket.status === 'confirmed' || ticket.status === 'pending'
+        (ticket.booking_status === 'confirmed' || ticket.booking_status === 'pending')
       );
     } else {
       filtered = filtered.filter(ticket => 
-        ticket.status === 'completed' || ticket.status === 'cancelled'
+        (ticket.booking_status === 'completed' || ticket.booking_status === 'cancelled' || ticket.booking_status === 'expired')
       );
     }
     
@@ -162,14 +168,14 @@ const MyTicketsScreen = () => {
       switch (filter) {
         case 'upcoming':
           filtered = filtered.filter(ticket => 
-            ticket.status === 'confirmed' || ticket.status === 'pending'
+            (ticket.booking_status === 'confirmed' || ticket.booking_status === 'pending')
           );
           break;
         case 'past':
-          filtered = filtered.filter(ticket => ticket.status === 'completed');
+          filtered = filtered.filter(ticket => ticket.booking_status === 'completed');
           break;
         case 'cancelled':
-          filtered = filtered.filter(ticket => ticket.status === 'cancelled');
+          filtered = filtered.filter(ticket => ticket.booking_status === 'cancelled');
           break;
       }
     }
@@ -178,18 +184,18 @@ const MyTicketsScreen = () => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(ticket =>
-        ticket.bookingCode?.toLowerCase().includes(query) ||
-        ticket.busName?.toLowerCase().includes(query) ||
-        ticket.departure?.toLowerCase().includes(query) ||
-        ticket.destination?.toLowerCase().includes(query)
+        ticket.booking_code?.toLowerCase().includes(query) ||
+        ticket.schedule?.bus_name?.toLowerCase().includes(query) ||
+        ticket.schedule?.departure_city?.toLowerCase().includes(query) ||
+        ticket.schedule?.arrival_city?.toLowerCase().includes(query)
       );
     }
     
-    // Sort by date (upcoming first)
+    // Sort by date (newest created first)
     return filtered.sort((a, b) => {
-      const dateA = a.departureDate ? parseISO(a.departureDate) : new Date(0);
-      const dateB = b.departureDate ? parseISO(b.departureDate) : new Date(0);
-      return dateA - dateB;
+      const dateA = a.created_at ? new Date(a.created_at.replace(' ', 'T')) : new Date(0);
+      const dateB = b.created_at ? new Date(b.created_at.replace(' ', 'T')) : new Date(0);
+      return dateB.getTime() - dateA.getTime();
     });
   };
 
@@ -304,13 +310,13 @@ const MyTicketsScreen = () => {
         {/* Ticket Header */}
         <View style={styles.ticketHeader}>
           <View style={styles.ticketIdContainer}>
-            <Text style={styles.ticketId}>{item.bookingCode}</Text>
-            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-              <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
+            <Text style={styles.ticketId}>{item.booking_code}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.booking_status) }]}>
+              <Text style={styles.statusText}>{getStatusText(item.booking_status)}</Text>
             </View>
           </View>
           <Text style={styles.bookingDate}>
-            {item.bookingDate ? formatShortDate(item.bookingDate) : '-'}
+            {item.created_at ? formatShortDate(item.created_at) : '-'}
           </Text>
         </View>
 
@@ -324,27 +330,31 @@ const MyTicketsScreen = () => {
           <View style={styles.routeDetails}>
             <View style={styles.routeStop}>
               <View>
-                <Text style={styles.cityName}>{item.departure}</Text>
+                <Text style={styles.cityName}>{item.schedule?.departure_city}</Text>
                 <Text style={styles.terminalName}>
-                  {item.boardingPoint || 'Terminal'}
+                  Terminal Keberangkatan
                 </Text>
               </View>
-              <Text style={styles.timeText}>{item.departureTime || '--:--'}</Text>
+              <Text style={styles.timeText}>
+                {item.schedule?.departure_time ? new Date(item.schedule.departure_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+              </Text>
             </View>
             <View style={styles.durationContainer}>
               <Ionicons name="time-outline" size={14} color="#666" />
               <Text style={styles.durationText}>
-                {item.duration || '4 jam'}
+                {item.schedule?.duration || 'Perjalanan'}
               </Text>
             </View>
             <View style={styles.routeStop}>
               <View>
-                <Text style={styles.cityName}>{item.destination}</Text>
+                <Text style={styles.cityName}>{item.schedule?.arrival_city}</Text>
                 <Text style={styles.terminalName}>
-                  {item.dropPoint || 'Terminal'}
+                  Terminal Kedatangan
                 </Text>
               </View>
-              <Text style={styles.timeText}>{item.arrivalTime || '--:--'}</Text>
+              <Text style={styles.timeText}>
+                {item.schedule?.arrival_time ? new Date(item.schedule.arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+              </Text>
             </View>
           </View>
         </View>
@@ -355,27 +365,27 @@ const MyTicketsScreen = () => {
             <View style={styles.detailItem}>
               <Ionicons name="bus-outline" size={16} color="#666" />
               <Text style={styles.detailLabel}>Bus</Text>
-              <Text style={styles.detailValue} numberOfLines={1}>{item.busName}</Text>
+              <Text style={styles.detailValue} numberOfLines={1}>{item.schedule?.bus_name || 'Bus'}</Text>
             </View>
             <View style={styles.detailItem}>
               <Ionicons name="people-outline" size={16} color="#666" />
               <Text style={styles.detailLabel}>Penumpang</Text>
-              <Text style={styles.detailValue}>{item.passengerCount || 1}</Text>
+              <Text style={styles.detailValue}>{item.total_passengers || 1}</Text>
             </View>
           </View>
           <View style={styles.detailRow}>
             <View style={styles.detailItem}>
               <Ionicons name="calendar-outline" size={16} color="#666" />
-              <Text style={styles.detailLabel}>Tanggal</Text>
+              <Text style={styles.detailLabel}>Berangkat</Text>
               <Text style={styles.detailValue}>
-                {item.departureDate ? formatShortDate(item.departureDate) : '-'}
+                {item.schedule?.departure_time ? formatShortDate(item.schedule.departure_time) : '-'}
               </Text>
             </View>
             <View style={styles.detailItem}>
               <Ionicons name="cash-outline" size={16} color="#666" />
               <Text style={styles.detailLabel}>Total</Text>
               <Text style={styles.detailValue}>
-                Rp {item.totalAmount?.toLocaleString('id-ID') || '0'}
+                Rp {parseFloat(item.total_price || 0).toLocaleString('id-ID')}
               </Text>
             </View>
           </View>
@@ -386,11 +396,11 @@ const MyTicketsScreen = () => {
           <View style={styles.seatsContainer}>
             <Ionicons name="grid-outline" size={14} color="#666" />
             <Text style={styles.seatsText}>
-              Kursi: {item.seats?.map(s => s.number).join(', ') || '-'}
+              Kursi: {item.seats?.join(', ') || '-'}
             </Text>
           </View>
           <View style={styles.actionButtons}>
-            {item.status === 'confirmed' && (
+            {item.booking_status === 'confirmed' && (
               <TouchableOpacity 
                 style={styles.viewButton}
                 onPress={() => handleTicketPress(item)}
@@ -399,12 +409,12 @@ const MyTicketsScreen = () => {
                 <Ionicons name="chevron-forward" size={16} color="#1E88E5" />
               </TouchableOpacity>
             )}
-            {item.status === 'pending' && (
+            {item.booking_status === 'pending' && (
               <TouchableOpacity 
                 style={styles.payButton}
                 onPress={() => navigation.navigate('Payment', {
-                  bookingId: item.bookingCode,
-                  totalAmount: item.totalAmount,
+                  bookingId: item.id,
+                  totalAmount: parseFloat(item.total_price),
                 })}
               >
                 <Text style={styles.payButtonText}>Bayar</Text>
@@ -520,7 +530,7 @@ const MyTicketsScreen = () => {
       <FlatList
         data={getFilteredTickets()}
         renderItem={renderTicketCard}
-        keyExtractor={(item) => item.id || item.bookingCode}
+        keyExtractor={(item, index) => item.id?.toString() || item.booking_code?.toString() || index.toString()}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={

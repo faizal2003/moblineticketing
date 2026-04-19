@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,8 @@ import {
   Animated,
   Dimensions,
   Modal,
+  ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -202,20 +204,21 @@ const TicketDetailScreen = () => {
     }
   };
 
-  const handleCancelTicket = () => {
+  const handleCancelTicket = async () => {
     if (!cancellationReason.trim()) {
       Alert.alert('Error', 'Harap masukkan alasan pembatalan');
       return;
     }
 
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      setLoading(true);
+      await dispatch(cancelBooking(bookingId)).unwrap();
+      
       setLoading(false);
       setShowCancelModal(false);
       Alert.alert(
         'Berhasil',
-        'Tiket berhasil dibatalkan. Dana akan dikembalikan dalam 3-5 hari kerja.',
+        'Tiket berhasil dibatalkan.',
         [
           {
             text: 'OK',
@@ -223,7 +226,10 @@ const TicketDetailScreen = () => {
           },
         ]
       );
-    }, 2000);
+    } catch (error) {
+      setLoading(false);
+      Alert.alert('Error', error || 'Gagal membatalkan tiket');
+    }
   };
 
   const handleContactSupport = () => {
@@ -304,6 +310,12 @@ const TicketDetailScreen = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
+        <TouchableOpacity 
+          style={{ position: 'absolute', top: 50, left: 20, zIndex: 10 }}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={24} color="#1E88E5" />
+        </TouchableOpacity>
         <ActivityIndicator size="large" color="#1E88E5" />
         <Text style={styles.loadingText}>Memuat detail tiket...</Text>
       </View>
@@ -526,6 +538,17 @@ const TicketDetailScreen = () => {
             <Ionicons name="headset-outline" size={20} color="#1E88E5" />
             <Text style={styles.supportButtonText}>Hubungi Support</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.supportButton, { marginTop: 12, borderColor: '#1E88E5' }]}
+            onPress={() => navigation.reset({
+              index: 0,
+              routes: [{ name: 'PassengerHome' }],
+            })}
+          >
+            <Ionicons name="home-outline" size={20} color="#1E88E5" />
+            <Text style={styles.supportButtonText}>Kembali ke Beranda</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -677,9 +700,6 @@ const TicketDetailScreen = () => {
     </SafeAreaView>
   );
 };
-
-// Add missing imports
-import { TextInput, ActivityIndicator } from 'react-native';
 
 const styles = StyleSheet.create({
   container: {

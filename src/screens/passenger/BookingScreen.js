@@ -268,39 +268,17 @@ const BookingScreen = () => {
   };
 
   const handlePayment = async () => {
-    setProcessing(true);
+    setShowPaymentModal(false);
+    setBookingSuccess(true);
     
-    // Simulate payment processing
+    // Navigate to payment screen with real booking ID from Redux state
+    // currentBooking was updated by createBooking.fulfilled
     setTimeout(() => {
-      setProcessing(false);
-      setShowPaymentModal(false);
-      setBookingSuccess(true);
-      
-      // Navigate to payment confirmation after delay
-      setTimeout(() => {
-        navigation.navigate('Payment', {
-          bookingId: currentBooking.bookingCode || `BKG${Math.floor(100000 + Math.random() * 900000)}`,
-          totalAmount: calculateTotal(),
-          bookingData: {
-            busName: selectedBus.name,
-            departure: selectedBus.departure,
-            destination: selectedBus.destination,
-            departureDate: selectedBus.departureDate,
-            departureTime: selectedBus.departureTime,
-            seats: selectedSeats,
-            passengerInfo: {
-              mainPassenger: {
-                name: formData.fullName,
-                email: formData.email,
-                phone: formData.phone,
-              },
-              additionalPassengers: passengerInfo.additionalPassengers,
-            },
-            totalAmount: calculateTotal(),
-          },
-        });
-      }, 2000);
-    }, 3000);
+      navigation.navigate('Payment', {
+        bookingId: currentBooking.id,
+        totalAmount: currentBooking.totalAmount,
+      });
+    }, 2000);
   };
 
   const renderPassengerForm = (passenger, index, isMain = false) => (

@@ -79,13 +79,15 @@ const PaymentScreen = () => {
     departureTime: currentBooking.departureTime || '08:00',
     passengerCount: currentBooking.passengerCount || 1,
     selectedSeats: currentBooking.seats?.map(s => s.number) || ['A1'],
-    subtotal: (currentBooking.totalAmount || 0) / 1.1,
-    tax: (currentBooking.totalAmount || 0) * 0.1,
-    serviceFee: 5000,
     total: totalAmount,
   };
 
   const booking = { ...defaultBookingData, ...bookingData };
+
+  // Recalculate breakdown based on total
+  const serviceFee = 5000;
+  const tax = (totalAmount - serviceFee) * 0.1;
+  const subtotal = totalAmount - serviceFee - tax;
 
   const paymentMethods = [
     {
@@ -152,8 +154,8 @@ const PaymentScreen = () => {
 
   useEffect(() => {
     // Set initial payment method from Redux
-    if (paymentInfo.method) {
-      setSelectedMethod(paymentInfo.method);
+    if (paymentInfo) {
+      setSelectedMethod(paymentInfo);
     }
 
     // Start countdown timer
@@ -283,15 +285,8 @@ const PaymentScreen = () => {
     // Refresh history
     dispatch(fetchBookingHistory());
     
-    setTimeout(() => {
-      setShowSuccess(false);
-      navigation.navigate('TicketDetail', { 
-        ticket: { id: bookingId } 
-      });
-      
-      // Clear current booking if successful
-      dispatch(clearCurrentBooking());
-    }, 2000);
+    // Clear current booking if successful
+    dispatch(clearCurrentBooking());
   };
 
   const validateCardDetails = () => {
@@ -585,15 +580,15 @@ const PaymentScreen = () => {
           <Text style={styles.priceTitle}>Rincian Pembayaran</Text>
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>Subtotal</Text>
-            <Text style={styles.priceValue}>Rp {booking.subtotal.toLocaleString('id-ID')}</Text>
+            <Text style={styles.priceValue}>Rp {subtotal.toLocaleString('id-ID')}</Text>
           </View>
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>Pajak (10%)</Text>
-            <Text style={styles.priceValue}>Rp {booking.tax.toLocaleString('id-ID')}</Text>
+            <Text style={styles.priceValue}>Rp {tax.toLocaleString('id-ID')}</Text>
           </View>
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>Biaya Layanan</Text>
-            <Text style={styles.priceValue}>Rp {booking.serviceFee.toLocaleString('id-ID')}</Text>
+            <Text style={styles.priceValue}>Rp {serviceFee.toLocaleString('id-ID')}</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.totalRow}>
@@ -701,9 +696,42 @@ const PaymentScreen = () => {
             </View>
             <Text style={styles.successTitle}>Pembayaran Berhasil!</Text>
             <Text style={styles.successMessage}>
-              Tiket Anda sedang diproses. Anda akan diarahkan ke halaman konfirmasi.
+              Tiket Anda telah diterbitkan. Anda dapat melihatnya di menu 'Tiket Saya'.
             </Text>
-            <ActivityIndicator size="large" color="#4CAF50" style={styles.successSpinner} />
+            
+            <View style={styles.successActions}>
+              <TouchableOpacity 
+                style={styles.viewTicketButton}
+                onPress={() => {
+                  setShowSuccess(false);
+                  navigation.reset({
+                    index: 1,
+                    routes: [
+                      { name: 'PassengerHome' },
+                      { 
+                        name: 'TicketDetail', 
+                        params: { ticket: { id: bookingId } } 
+                      },
+                    ],
+                  });
+                }}
+              >
+                <Text style={styles.viewTicketText}>Lihat Tiket</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.backHomeButton}
+                onPress={() => {
+                  setShowSuccess(false);
+                  navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'PassengerHome' }],
+                  });
+                }}
+              >
+                <Text style={styles.backHomeText}>Kembali ke Beranda</Text>
+              </TouchableOpacity>
+            </View>
           </Animated.View>
         </View>
       )}
@@ -1276,6 +1304,36 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,
+  },
+  successActions: {
+    width: '100%',
+    gap: 12,
+  },
+  viewTicketButton: {
+    backgroundColor: '#1E88E5',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    width: '100%',
+  },
+  viewTicketText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  backHomeButton: {
+    backgroundColor: '#FFF',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    width: '100%',
+  },
+  backHomeText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
   },
   successSpinner: {
     marginTop: 16,
