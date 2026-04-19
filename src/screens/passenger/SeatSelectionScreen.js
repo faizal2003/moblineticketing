@@ -11,6 +11,7 @@ import {
   StatusBar,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -150,7 +151,7 @@ const SeatSelectionScreen = () => {
   const renderDriverSection = () => (
     <View style={styles.driverSection}>
       <View style={styles.driverIcon}>
-        <Ionicons name="steering-wheel" size={40} color="#666" />
+        <MaterialCommunityIcons name="steering" size={40} color="#666" />
       </View>
       <Text style={styles.driverText}>Sopir</Text>
     </View>
