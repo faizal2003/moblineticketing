@@ -1,0 +1,379 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  SafeAreaView,
+  Image,
+  TextInput,
+  FlatList,
+} from 'react-native';
+import { useSelector } from 'react-redux';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import { busService } from '../../services/busService';
+
+export default function PassengerHome({ navigation }) {
+  const { user } = useSelector((state) => state.auth);
+  const [searchParams, setSearchParams] = useState({
+    origin: '',
+    destination: '',
+    date: new Date().toISOString().split('T')[0],
+  });
+  const [popularRoutes, setPopularRoutes] = useState([]);
+  const [recentBookings, setRecentBookings] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchPopularRoutes();
+    fetchRecentBookings();
+  }, []);
+
+  const fetchPopularRoutes = async () => {
+    try {
+      // Fetch popular routes from API
+      const response = await busService.searchBuses({
+        limit: 5,
+        sort_by: 'popularity',
+      });
+      setPopularRoutes(response.data.data);
+    } catch (error) {
+      console.error('Error fetching popular routes:', error);
+    }
+  };
+
+  const fetchRecentBookings = async () => {
+    try {
+      const response = await busService.getMyBookings();
+      setRecentBookings(response.data.data.slice(0, 3));
+    } catch (error) {
+      console.error('Error fetching recent bookings:', error);
+    }
+  };
+
+  const handleSearch = () => {
+    navigation.navigate('SearchBus', searchParams);
+  };
+
+  const renderPopularRoute = ({ item }) => (
+    <TouchableOpacity
+      style={styles.routeCard}
+      onPress={() => navigation.navigate('SearchBus', {
+        origin: item.origin_city,
+        destination: item.destination_city,
+        date: searchParams.date,
+      })}
+    >
+      <View style={styles.routeInfo}>
+        <Text style={styles.routeCities}>{item.origin_city} → {item.destination_city}</Text>
+        <Text style={styles.routePrice}>Rp {item.price.toLocaleString()}</Text>
+      </View>
+      <Icon name="arrow-forward-ios" size={16} color="#666" />
+    </TouchableOpacity>
+  );
+
+  const renderRecentBooking = ({ item }) => (
+    <TouchableOpacity
+      style={styles.bookingCard}
+      onPress={() => navigation.navigate('TicketDetail', { bookingId: item.id })}
+    >
+      <View style={styles.bookingHeader}>
+        <Text style={styles.bookingRoute}>{item.bus?.route}</Text>
+        <Text style={[styles.bookingStatus, 
+          item.status === 'confirmed' ? styles.statusConfirmed : styles.statusPending
+        ]}>
+          {item.status}
+        </Text>
+      </View>
+      <Text style={styles.bookingDate}>
+        {new Date(item.departure_time).toLocaleDateString()}
+      </Text>
+      <Text style={styles.bookingSeats}>Seats: {item.seats.join(', ')}</Text>
+    </TouchableOpacity>
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView>
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>Hello, {user?.name}</Text>
+            <Text style={styles.subGreeting}>Where do you want to go?</Text>
+          </View>
+          <TouchableOpacity onPress={() => navigation.navigate('MyTickets')}>
+            <Icon name="confirmation-number" size={28} color="#1E88E5" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Search Section */}
+        <View style={styles.searchSection}>
+          <View style={styles.searchInputContainer}>
+            <Icon name="location-on" size={20} color="#1E88E5" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="From"
+              value={searchParams.origin}
+              onChangeText={(text) => setSearchParams({ ...searchParams, origin: text })}
+            />
+          </View>
+          
+          <View style={styles.searchInputContainer}>
+            <Icon name="location-on" size={20} color="#1E88E5" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="To"
+              value={searchParams.destination}
+              onChangeText={(text) => setSearchParams({ ...searchParams, destination: text })}
+            />
+          </View>
+          
+          <View style={styles.searchInputContainer}>
+            <Icon name="calendar-today" size={20} color="#1E88E5" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Date"
+              value={searchParams.date}
+              onChangeText={(text) => setSearchParams({ ...searchParams, date: text })}
+            />
+          </View>
+
+          <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+            <Text style={styles.searchButtonText}>Search Bus</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Popular Routes */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Popular Routes</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('SearchBus')}>
+              <Text style={styles.seeAll}>See All</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={popularRoutes}
+            renderItem={renderPopularRoute}
+            keyExtractor={(item) => item.id.toString()}
+            scrollEnabled={false}
+          />
+        </View>
+
+        {/* Recent Bookings */}
+        {recentBookings.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Recent Bookings</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('MyTickets')}>
+                <Text style={styles.seeAll}>See All</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={recentBookings}
+              renderItem={renderRecentBooking}
+              keyExtractor={(item) => item.id.toString()}
+              scrollEnabled={false}
+            />
+          </View>
+        )}
+
+        {/* Quick Actions */}
+        <View style={styles.quickActions}>
+          <TouchableOpacity style={styles.quickAction} onPress={() => navigation.navigate('MyTickets')}>
+            <View style={[styles.quickActionIcon, { backgroundColor: '#E3F2FD' }]}>
+              <Icon name="confirmation-number" size={24} color="#1E88E5" />
+            </View>
+            <Text style={styles.quickActionText}>My Tickets</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.quickAction}>
+            <View style={[styles.quickActionIcon, { backgroundColor: '#F3E5F5' }]}>
+              <Icon name="history" size={24} color="#7B1FA2" />
+            </View>
+            <Text style={styles.quickActionText}>History</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.quickAction}>
+            <View style={[styles.quickActionIcon, { backgroundColor: '#E8F5E8' }]}>
+              <Icon name="support-agent" size={24} color="#388E3C" />
+            </View>
+            <Text style={styles.quickActionText}>Support</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 10,
+  },
+  greeting: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  subGreeting: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 5,
+  },
+  searchSection: {
+    padding: 20,
+    backgroundColor: '#F8F9FA',
+    marginHorizontal: 20,
+    borderRadius: 15,
+    marginTop: 10,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    marginBottom: 15,
+    paddingHorizontal: 15,
+    height: 50,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+  },
+  searchButton: {
+    backgroundColor: '#1E88E5',
+    borderRadius: 10,
+    paddingVertical: 15,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  searchButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  section: {
+    paddingHorizontal: 20,
+    marginTop: 30,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  seeAll: {
+    color: '#1E88E5',
+    fontSize: 14,
+  },
+  routeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  routeInfo: {
+    flex: 1,
+  },
+  routeCities: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  routePrice: {
+    fontSize: 14,
+    color: '#1E88E5',
+    marginTop: 5,
+  },
+  bookingCard: {
+    backgroundColor: '#FFFFFF',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  bookingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  bookingRoute: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  bookingStatus: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 5,
+  },
+  statusConfirmed: {
+    backgroundColor: '#E8F5E8',
+    color: '#388E3C',
+  },
+  statusPending: {
+    backgroundColor: '#FFF3E0',
+    color: '#F57C00',
+  },
+  bookingDate: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 5,
+  },
+  bookingSeats: {
+    fontSize: 14,
+    color: '#666',
+  },
+  quickActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 20,
+    marginTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  quickAction: {
+    alignItems: 'center',
+  },
+  quickActionIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  quickActionText: {
+    fontSize: 12,
+    color: '#666',
+  },
+});
