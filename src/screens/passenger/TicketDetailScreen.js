@@ -67,8 +67,8 @@ const TicketDetailScreen = () => {
       setCurrentTicket({
         id: data.ticket?.ticket_code || 'N/A',
         bookingId: data.booking_code,
-        busName: data.schedule?.bus_name,
-        busNumber: data.schedule?.bus_number || '-',
+        busName: data.schedule?.bus?.name || data.schedule?.bus_name || '-',
+        busNumber: data.schedule?.bus?.number || data.schedule?.bus_number || '-',
         departure: data.schedule?.departure_city,
         destination: data.schedule?.arrival_city,
         departureDate: new Date(data.schedule?.departure_time),
@@ -82,7 +82,7 @@ const TicketDetailScreen = () => {
         bookingDate: new Date(data.created_at),
         boardingPoint: data.schedule?.departure_city,
         dropPoint: data.schedule?.arrival_city,
-        bookingClass: data.schedule?.bus_type || 'Executive',
+        bookingClass: data.schedule?.bus?.type || data.schedule?.bus_type || 'Executive',
         facilities: data.schedule?.facilities || [],
         qrCode: data.ticket?.ticket_code || '-',
         passengerInfo: data.passengers.map(p => ({
