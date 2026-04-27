@@ -28,6 +28,8 @@ import { id } from 'date-fns/locale';
 import ViewShot from 'react-native-view-shot';
 import RNFS from 'react-native-fs';
 import Share from 'react-native-share';
+import QRCode from 'react-native-qrcode-svg';
+import { CameraRoll } from '@react-native-camera-roll/camera-roll';
 import { busService } from '../../services/busService';
 
 const { width, height } = Dimensions.get('window');
@@ -39,12 +41,14 @@ const TicketDetailScreen = () => {
   const bookingId = ticket?.id;
 
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
   const [currentTicket, setCurrentTicket] = useState(null);
   const [showShareOptions, setShowShareOptions] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   const [cancellationReason, setCancellationReason] = useState('');
   const viewShotRef = useRef();
+  const printableRef = useRef();
   const slideAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -155,52 +159,45 @@ const TicketDetailScreen = () => {
     try {
       setShowShareOptions(false);
       
-      // Capture the ticket as image
-      setLoading(true);
-      const uri = await viewShotRef.current.capture();
+      // Capture the printable ticket
+      setActionLoading(true);
+      if (!printableRef.current) return;
       
-      if (Platform.OS === 'ios') {
-        await Sharing.shareAsync(uri, {
-          mimeType: 'image/png',
-          dialogTitle: 'Bagikan Tiket',
-        });
-      } else {
-        await Share.share({
-          url: uri,
-          title: 'Tiket Bus Saya',
-          message: 'Lihat tiket bus saya',
-        });
-      }
+      const uri = await printableRef.current.capture();
+      
+      const shareOptions = {
+        title: 'Tiket Bus Saya',
+        message: 'Lihat tiket bus saya untuk perjalanan ' + currentTicket.departure + ' ke ' + currentTicket.destination,
+        url: 'file://' + uri,
+        type: 'image/png',
+      };
+
+      await Share.open(shareOptions);
     } catch (error) {
-      console.error('Error sharing ticket:', error);
-      Alert.alert('Error', 'Gagal membagikan tiket');
+      if (error.message !== 'User did not share') {
+        console.error('Error sharing ticket:', error);
+        Alert.alert('Error', 'Gagal membagikan tiket');
+      }
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   };
 
   const handleDownload = async () => {
     try {
-      setLoading(true);
-      const uri = await viewShotRef.current.capture();
+      setActionLoading(true);
+      if (!printableRef.current) return;
       
-      // Request permission for Android
-      if (Platform.OS === 'android') {
-        const { status } = await MediaLibrary.requestPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('Izin diperlukan', 'Izin diperlukan untuk menyimpan gambar');
-          return;
-        }
-      }
+      const uri = await printableRef.current.capture();
       
-      // Save to gallery
-      await MediaLibrary.saveToLibraryAsync(uri);
+      // Save to gallery using CameraRoll
+      await CameraRoll.save(uri, { type: 'photo' });
       Alert.alert('Berhasil', 'Tiket berhasil disimpan ke galeri');
     } catch (error) {
       console.error('Error downloading ticket:', error);
-      Alert.alert('Error', 'Gagal menyimpan tiket');
+      Alert.alert('Error', 'Gagal menyimpan tiket. Pastikan aplikasi memiliki izin galeri.');
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   };
 
@@ -211,10 +208,10 @@ const TicketDetailScreen = () => {
     }
 
     try {
-      setLoading(true);
+      setActionLoading(true);
       await dispatch(cancelBooking(bookingId)).unwrap();
       
-      setLoading(false);
+      setActionLoading(false);
       setShowCancelModal(false);
       Alert.alert(
         'Berhasil',
@@ -227,7 +224,7 @@ const TicketDetailScreen = () => {
         ]
       );
     } catch (error) {
-      setLoading(false);
+      setActionLoading(false);
       Alert.alert('Error', error || 'Gagal membatalkan tiket');
     }
   };
@@ -340,6 +337,90 @@ const TicketDetailScreen = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#1E88E5" barStyle="light-content" />
       
+      {/* Hidden Printable Ticket (Hidden from view, used for capture) */}
+      <View style={styles.hiddenContainer}>
+        <ViewShot ref={printableRef} options={{ format: 'png', quality: 1.0 }}>
+          <View style={styles.printableTicket}>
+            <View style={styles.printableHeader}>
+              <Text style={styles.printableTitle}>TIKET BUS ONLINE</Text>
+              <Text style={styles.printableSubtitle}>Booking ID: {currentTicket?.bookingId}</Text>
+            </View>
+            
+            <View style={styles.printableContent}>
+              <View style={styles.printableRouteInfo}>
+                <View style={styles.printableRow}>
+                  <View style={styles.printableCol}>
+                    <Text style={styles.printableLabel}>KEBERANGKATAN</Text>
+                    <Text style={styles.printableValue}>{currentTicket?.departure}</Text>
+                    <Text style={styles.printableSubValue}>{currentTicket ? format(currentTicket.departureDate, 'd MMM yyyy, HH:mm') : '-'} WIB</Text>
+                  </View>
+                  <View style={styles.printableCol}>
+                    <Text style={styles.printableLabel}>KEDATANGAN</Text>
+                    <Text style={styles.printableValue}>{currentTicket?.destination}</Text>
+                    <Text style={styles.printableSubValue}>{currentTicket && currentTicket.arrivalTime ? currentTicket.arrivalTime : '-'} WIB</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.printableRow}>
+                <View style={styles.printableCol}>
+                  <Text style={styles.printableLabel}>NAMA BUS</Text>
+                  <Text style={styles.printableValue}>{currentTicket?.busName}</Text>
+                </View>
+                <View style={styles.printableCol}>
+                  <Text style={styles.printableLabel}>NOMOR BUS / TIPE</Text>
+                  <Text style={styles.printableValue}>{currentTicket?.busNumber} / {currentTicket?.bookingClass}</Text>
+                </View>
+              </View>
+
+              <View style={styles.printablePassengerSection}>
+                <Text style={styles.printableSectionTitle}>INFORMASI PENUMPANG</Text>
+                {currentTicket?.passengerInfo.map((p, idx) => (
+                  <View key={idx} style={styles.printablePassengerRow}>
+                    <View style={styles.printableRow}>
+                      <View style={styles.printableCol}>
+                        <Text style={styles.printableLabel}>NAMA PENUMPANG {idx + 1}</Text>
+                        <Text style={styles.printableValue}>{p.name}</Text>
+                      </View>
+                      <View style={styles.printableCol}>
+                        <Text style={styles.printableLabel}>NOMOR KURSI</Text>
+                        <Text style={[styles.printableValue, { color: '#1E88E5', fontSize: 18 }]}>{currentTicket.seats[idx]}</Text>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+
+              <View style={styles.printableQrSection}>
+                <View style={styles.printableQrWrapper}>
+                  {currentTicket && (
+                    <QRCode
+                      value={JSON.stringify({
+                        ticket_code: currentTicket.id,
+                        booking_id: currentTicket.bookingId,
+                        passenger_name: currentTicket.passengerInfo?.[0]?.name,
+                        timestamp: Math.floor(Date.now() / 1000),
+                      })}
+                      size={150}
+                    />
+                  )}
+                </View>
+                <Text style={[styles.printableValue, { color: '#1E88E5', letterSpacing: 2, marginTop: 10 }]}>{currentTicket?.id}</Text>
+                <Text style={styles.printableLabel}>Tunjukkan QR Code ini kepada petugas saat boarding</Text>
+              </View>
+            </View>
+
+            <View style={styles.printableFooter}>
+                <Text style={styles.printableFooterTitle}>Catatan Penting:</Text>
+                <Text style={styles.printableFooterText}>1. Harap hadir 30 menit sebelum jadwal keberangkatan.</Text>
+                <Text style={styles.printableFooterText}>2. Tiket ini merupakan bukti pembayaran yang sah.</Text>
+                <Text style={styles.printableFooterText}>3. Dilarang membawa barang-barang terlarang dan berbahaya.</Text>
+                <Text style={styles.printableFooterText}>4. Informasi lebih lanjut hubungi Support: +62 812-3456-7890</Text>
+            </View>
+          </View>
+        </ViewShot>
+      </View>
+
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -471,9 +552,21 @@ const TicketDetailScreen = () => {
                 onPress={() => setShowQRModal(true)}
               >
                 <View style={styles.qrPlaceholder}>
-                  <Ionicons name="qr-code-outline" size={80} color="#1E88E5" />
+                  {currentTicket.qrCode && currentTicket.qrCode !== '-' ? (
+                    <QRCode
+                      value={JSON.stringify({
+                        ticket_code: currentTicket.id,
+                        booking_id: currentTicket.bookingId,
+                      })}
+                      size={140}
+                      color="#000"
+                      backgroundColor="#F5F5F5"
+                    />
+                  ) : (
+                    <Ionicons name="qr-code-outline" size={80} color="#1E88E5" />
+                  )}
                   <Text style={styles.qrText}>Scan untuk boarding</Text>
-                  <Text style={styles.qrCode}>{currentTicket.qrCode}</Text>
+                  <Text style={styles.qrCode}>{currentTicket.id}</Text>
                 </View>
               </TouchableOpacity>
               <Text style={styles.qrInstruction}>
@@ -504,16 +597,22 @@ const TicketDetailScreen = () => {
               <TouchableOpacity 
                 style={styles.primaryButton}
                 onPress={handleDownload}
-                disabled={loading}
+                disabled={actionLoading}
               >
-                <Ionicons name="download-outline" size={20} color="#FFF" />
-                <Text style={styles.primaryButtonText}>Download Tiket</Text>
+                {actionLoading ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <>
+                    <Ionicons name="download-outline" size={20} color="#FFF" />
+                    <Text style={styles.primaryButtonText}>Download Tiket</Text>
+                  </>
+                )}
               </TouchableOpacity>
               
               <TouchableOpacity 
                 style={styles.secondaryButton}
                 onPress={() => setShowCancelModal(true)}
-                disabled={loading}
+                disabled={actionLoading}
               >
                 <Ionicons name="close-circle-outline" size={20} color="#F44336" />
                 <Text style={styles.secondaryButtonText}>Batalkan Tiket</Text>
@@ -525,6 +624,7 @@ const TicketDetailScreen = () => {
             <TouchableOpacity 
               style={styles.payButton}
               onPress={() => navigation.navigate('Payment', { bookingId: currentTicket.bookingId })}
+              disabled={actionLoading}
             >
               <Ionicons name="card-outline" size={20} color="#FFF" />
               <Text style={styles.payButtonText}>Bayar Sekarang</Text>
@@ -640,9 +740,9 @@ const TicketDetailScreen = () => {
                 <TouchableOpacity 
                   style={[styles.modalButton, styles.confirmCancelButton]}
                   onPress={handleCancelTicket}
-                  disabled={loading}
+                  disabled={actionLoading}
                 >
-                  {loading ? (
+                  {actionLoading ? (
                     <ActivityIndicator color="#FFF" />
                   ) : (
                     <Text style={styles.confirmCancelButtonText}>Ya, Batalkan</Text>
@@ -671,8 +771,22 @@ const TicketDetailScreen = () => {
             </View>
             <View style={styles.qrModalContent}>
               <View style={styles.qrCodeDisplay}>
-                <Ionicons name="qr-code" size={200} color="#FFF" />
-                <Text style={styles.qrCodeText}>{currentTicket.qrCode}</Text>
+                {currentTicket.qrCode && currentTicket.qrCode !== '-' ? (
+                  <QRCode
+                    value={JSON.stringify({
+                      ticket_code: currentTicket.id,
+                      booking_id: currentTicket.bookingId,
+                      passenger_name: currentTicket.passengerInfo?.[0]?.name,
+                      timestamp: Math.floor(Date.now() / 1000),
+                    })}
+                    size={220}
+                    color="#000"
+                    backgroundColor="#FFF"
+                  />
+                ) : (
+                  <Ionicons name="qr-code" size={200} color="#000" />
+                )}
+                <Text style={styles.qrCodeText}>{currentTicket.id}</Text>
               </View>
               <Text style={styles.qrModalInstruction}>
                 Tunjukkan kode ini kepada petugas boarding
@@ -1400,6 +1514,113 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#FFF',
     fontWeight: '500',
+  },
+  hiddenContainer: {
+    position: 'absolute',
+    left: -1000, // Move off-screen
+    width: 600,  // Fixed width for high quality capture
+    backgroundColor: '#FFF',
+  },
+  printableTicket: {
+    width: 600,
+    backgroundColor: '#FFF',
+    borderWidth: 2,
+    borderColor: '#1E88E5',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  printableHeader: {
+    backgroundColor: '#1E88E5',
+    padding: 20,
+    alignItems: 'center',
+  },
+  printableTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFF',
+  },
+  printableSubtitle: {
+    fontSize: 14,
+    color: '#FFF',
+    marginTop: 5,
+  },
+  printableContent: {
+    padding: 20,
+  },
+  printableRow: {
+    flexDirection: 'row',
+    marginBottom: 15,
+  },
+  printableCol: {
+    flex: 1,
+  },
+  printableLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 2,
+  },
+  printableValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  printableSubValue: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  printableRouteInfo: {
+    backgroundColor: '#F5F5F5',
+    padding: 15,
+    borderRadius: 5,
+    marginBottom: 20,
+  },
+  printablePassengerSection: {
+    marginTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#EEE',
+    paddingTop: 20,
+  },
+  printableSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 15,
+  },
+  printablePassengerRow: {
+    marginBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    paddingBottom: 5,
+  },
+  printableQrSection: {
+    alignItems: 'center',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#CCC',
+    borderStyle: 'dashed',
+    marginTop: 10,
+  },
+  printableQrWrapper: {
+    padding: 10,
+    backgroundColor: '#FFF',
+  },
+  printableFooter: {
+    backgroundColor: '#F9F9F9',
+    padding: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#EEE',
+  },
+  printableFooterTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#555',
+    marginBottom: 5,
+  },
+  printableFooterText: {
+    fontSize: 11,
+    color: '#777',
+    marginBottom: 2,
   },
 });
 
