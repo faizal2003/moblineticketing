@@ -33,8 +33,6 @@ const BusDetailScreen = () => {
     facilities: [],
     totalSeats: 0,
     availableSeats: 0,
-    rating: 4.5,
-    reviews: 0,
     departure: departure || '',
     destination: destination || '',
     departureTime: departureTime || '',
@@ -66,6 +64,7 @@ const BusDetailScreen = () => {
         ...busDetails,
         name: data.name,
         type: data.type,
+        image: data.image,
         facilities: data.facilities || [],
         totalSeats: data.total_seats,
         availableSeats: schedule ? schedule.available_seats : data.total_seats,
@@ -139,8 +138,17 @@ const BusDetailScreen = () => {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Bus Image Hero */}
+        {busDetails.image && (
+          <Image 
+            source={{ uri: busDetails.image }} 
+            style={styles.heroImage} 
+            resizeMode="cover" 
+          />
+        )}
+
         {/* Bus Info Card */}
-        <View style={styles.busInfoCard}>
+        <View style={[styles.busInfoCard, busDetails.image && styles.busInfoCardOverlap]}>
           <View style={styles.busHeader}>
             <View style={styles.busIconContainer}>
               <Ionicons name="bus" size={32} color="#1E88E5" />
@@ -148,10 +156,6 @@ const BusDetailScreen = () => {
             <View style={styles.busTitleContainer}>
               <Text style={styles.busName}>{busDetails.name}</Text>
               <Text style={styles.busType}>{busDetails.type}</Text>
-            </View>
-            <View style={styles.ratingContainer}>
-              <Ionicons name="star" size={16} color="#FFD700" />
-              <Text style={styles.ratingText}>{busDetails.rating} ({busDetails.reviews} review)</Text>
             </View>
           </View>
 
@@ -300,6 +304,15 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  busInfoCardOverlap: {
+    marginTop: -20,
+  },
+  heroImage: {
+    width: '100%',
+    height: 200,
+    backgroundColor: '#E3F2FD',
+  },
+
   busHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -326,20 +339,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginTop: 2,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF8E1',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  ratingText: {
-    marginLeft: 4,
-    fontSize: 12,
-    color: '#FF9800',
-    fontWeight: '500',
   },
   routeContainer: {
     flexDirection: 'row',

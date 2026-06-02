@@ -5,6 +5,7 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  Image,
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -36,6 +37,13 @@ const BusListScreen = ({ navigation }) => {
       onPress={() => handleSelectBus(item)}
     >
       <View style={styles.busHeader}>
+        {item.bus.image ? (
+          <Image source={{ uri: item.bus.image }} style={styles.listBusImage} />
+        ) : (
+          <View style={styles.listBusIconPlaceholder}>
+            <Ionicons name="bus" size={24} color="#1E88E5" />
+          </View>
+        )}
         <View style={styles.busInfo}>
           <Text style={styles.busName}>{item.bus.name}</Text>
           <Text style={styles.busType}>{item.bus.type}</Text>
@@ -153,7 +161,23 @@ const styles = StyleSheet.create({
   busHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 16,
+  },
+  listBusImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  listBusIconPlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    backgroundColor: '#E3F2FD',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   busInfo: {
     flex: 1,

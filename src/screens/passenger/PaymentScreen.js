@@ -18,11 +18,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
+import Clipboard from '@react-native-clipboard/clipboard';
 
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   processPayment,
+  verifyPayment,
   updatePaymentInfo,
   updateBookingStatus,
   fetchBookingHistory,
@@ -58,6 +60,8 @@ const PaymentScreen = () => {
     cardCVC: '',
     cardName: '',
   });
+  const [selectedBank, setSelectedBank] = useState('bca');
+  const [showVAModal, setShowVAModal] = useState(false);
   const [paymentSteps, setPaymentSteps] = useState([
     { id: 1, title: 'Pilih Metode', completed: true, active: true },
     { id: 2, title: 'Bayar', completed: false, active: false },
@@ -202,6 +206,31 @@ const PaymentScreen = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const copyToClipboard = (text) => {
+    Clipboard.setString(text);
+    Alert.alert('Sukses', 'Nomor Virtual Account berhasil disalin!');
+  };
+
+  const handleVerify = async () => {
+    if (!currentBooking?.payment_id) return;
+    
+    try {
+      setProcessing(true);
+      const res = await dispatch(verifyPayment(currentBooking.payment_id)).unwrap();
+      setProcessing(false);
+      
+      if (res.data && res.data.status === 'success') {
+        setShowVAModal(false);
+        setShowSuccess(true);
+      } else {
+        Alert.alert('Status Pembayaran', 'Pembayaran belum diterima. Silakan selesaikan pembayaran dan cek kembali.');
+      }
+    } catch (error) {
+      setProcessing(false);
+      Alert.alert('Error', 'Gagal mengecek status pembayaran.');
+    }
+  };
+
   const handlePayment = async () => {
     if (selectedMethod === 'cash') {
       Alert.alert(
@@ -236,16 +265,25 @@ const PaymentScreen = () => {
         ...(selectedMethod === 'credit_card' && {
           card_details: cardDetails,
         }),
+        ...(selectedMethod === 'bank_transfer' && {
+          bank: selectedBank,
+        }),
       };
 
       // Simulate API call using real thunk
-      await dispatch(processPayment({ 
+      const res = await dispatch(processPayment({ 
         bookingId: bookingId, 
         paymentData: paymentData 
       })).unwrap();
       
       updatePaymentSteps(3);
-      await handlePaymentSuccess();
+      
+      if (res.data && res.data.midtrans) {
+        setProcessing(false);
+        setShowVAModal(true);
+      } else {
+        await handlePaymentSuccess();
+      }
       
     } catch (error) {
       setProcessing(true); // Keep processing state while showing alert if you want, or set to false
@@ -389,35 +427,31 @@ const PaymentScreen = () => {
       case 'bank_transfer':
         return (
           <View style={styles.instructionCard}>
-            <Text style={styles.instructionTitle}>Cara Pembayaran Transfer Bank:</Text>
+            <Text style={styles.instructionTitle}>Pilih Bank Tujuan:</Text>
             {banks.map((bank) => (
-              <View key={bank.id} style={styles.bankCard}>
+              <TouchableOpacity 
+                key={bank.id} 
+                style={[
+                  styles.bankCard, 
+                  selectedBank === bank.id && styles.paymentMethodSelected
+                ]}
+                onPress={() => setSelectedBank(bank.id)}
+              >
                 <View style={styles.bankHeader}>
                   <View style={[styles.bankLogo, { backgroundColor: '#4CAF50' }]}>
                     <Text style={styles.bankInitials}>{bank.name.substring(0, 2)}</Text>
                   </View>
                   <View style={styles.bankInfo}>
                     <Text style={styles.bankName}>{bank.name}</Text>
-                    <Text style={styles.bankCode}>Kode Bank: {bank.code}</Text>
+                    <Text style={styles.bankCode}>Proses Cepat via Virtual Account Midtrans</Text>
+                  </View>
+                  <View>
+                    {selectedBank === bank.id && (
+                      <Ionicons name="checkmark-circle" size={24} color="#1E88E5" />
+                    )}
                   </View>
                 </View>
-                <View style={styles.accountDetails}>
-                  <View style={styles.accountRow}>
-                    <Text style={styles.accountLabel}>Nomor Rekening:</Text>
-                    <Text style={styles.accountValue}>{bank.accountNumber}</Text>
-                  </View>
-                  <View style={styles.accountRow}>
-                    <Text style={styles.accountLabel}>Atas Nama:</Text>
-                    <Text style={styles.accountValue}>{bank.accountName}</Text>
-                  </View>
-                  <View style={styles.accountRow}>
-                    <Text style={styles.accountLabel}>Jumlah Transfer:</Text>
-                    <Text style={[styles.accountValue, styles.amountHighlight]}>
-                      Rp {booking.total.toLocaleString('id-ID')}
-                    </Text>
-                  </View>
-                </View>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         );
@@ -690,6 +724,63 @@ const PaymentScreen = () => {
           </View>
         </View>
       </Modal>
+
+      {/* VA Overlay */}
+      {showVAModal && (
+        <View style={styles.successOverlay}>
+          <Animated.View style={[styles.successContainer, { opacity: fadeAnim }]}>
+            <View style={styles.successIcon}>
+              <Ionicons name="card" size={80} color="#1E88E5" />
+            </View>
+            <Text style={styles.successTitle}>Menunggu Pembayaran</Text>
+            <Text style={styles.successMessage}>
+              Silakan selesaikan pembayaran ke Virtual Account berikut:
+            </Text>
+            
+            <View style={[styles.bankCard, { width: '100%', marginBottom: 20 }]}>
+               <Text style={{ textAlign: 'center', color: '#666', marginBottom: 8 }}>Nomor Virtual Account</Text>
+               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                 <Text style={{ textAlign: 'center', fontSize: 24, fontWeight: 'bold', color: '#333', marginRight: 10 }}>
+                   {currentBooking?.midtrans?.va_numbers?.[0]?.va_number || '-'}
+                 </Text>
+                 <TouchableOpacity onPress={() => copyToClipboard(currentBooking?.midtrans?.va_numbers?.[0]?.va_number || '')}>
+                   <Ionicons name="copy-outline" size={24} color="#1E88E5" />
+                 </TouchableOpacity>
+               </View>
+               <Text style={{ textAlign: 'center', color: '#1E88E5', marginTop: 8, fontWeight: '500' }}>
+                 Bank {currentBooking?.midtrans?.va_numbers?.[0]?.bank?.toUpperCase() || '-'}
+               </Text>
+            </View>
+
+            <View style={styles.successActions}>
+              <TouchableOpacity 
+                style={styles.viewTicketButton}
+                onPress={handleVerify}
+                disabled={processing}
+              >
+                {processing ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <Text style={styles.viewTicketText}>Cek Status Pembayaran</Text>
+                )}
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.backHomeButton}
+                onPress={() => {
+                  setShowVAModal(false);
+                  navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'PassengerHome' }],
+                  });
+                }}
+              >
+                <Text style={styles.backHomeText}>Tutup</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </View>
+      )}
 
       {/* Success Overlay */}
       {showSuccess && (

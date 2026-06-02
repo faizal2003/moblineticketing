@@ -41,7 +41,10 @@ const bookingAPI = {
   },
   
   processPayment: (bookingId, paymentData) => 
-    api.post(`/bookings/${bookingId}/confirm-payment`, paymentData),
+    api.post('/payments/initiate', { booking_id: bookingId, ...paymentData }),
+  
+  verifyPayment: (paymentId) =>
+    api.post(`/payments/${paymentId}/verify`),
   
   fetchBookingHistory: () => 
     api.get('/bookings'),
@@ -94,6 +97,11 @@ export const createBooking = createBookingThunk(
 export const processPayment = createBookingThunk(
   'processPayment', 
   ({ bookingId, paymentData }) => bookingAPI.processPayment(bookingId, paymentData)
+);
+
+export const verifyPayment = createBookingThunk(
+  'verifyPayment',
+  (paymentId) => bookingAPI.verifyPayment(paymentId)
 );
 
 export const fetchBookingHistory = createBookingThunk(
@@ -405,24 +413,50 @@ const bookingSlice = createSlice({
         state.success = true;
         state.lastUpdated = new Date().toISOString();
         
-        // Update current booking state
-        state.currentBooking.payment_status = 'paid';
-        state.currentBooking.booking_status = 'confirmed';
-        state.currentBooking.paymentStatus = 'paid';
-        state.currentBooking.status = 'confirmed';
-        
-        // Update in history too
-        const bookingId = state.currentBooking.id;
-        state.bookingHistory = state.bookingHistory.map(booking => 
-          booking.id === bookingId 
-            ? { ...booking, booking_status: 'confirmed', payment_status: 'paid' }
-            : booking
-        );
+        // Store midtrans data in currentBooking to use in UI
+        if (action.payload.data && action.payload.data.midtrans) {
+          state.currentBooking.midtrans = action.payload.data.midtrans;
+          state.currentBooking.payment_id = action.payload.data.payment_id;
+          state.currentBooking.payment_status = 'pending';
+          state.currentBooking.booking_status = 'pending';
+        } else {
+          // Update current booking state if it's direct success (e.g. cash)
+          state.currentBooking.payment_status = 'paid';
+          state.currentBooking.booking_status = 'confirmed';
+          state.currentBooking.paymentStatus = 'paid';
+          state.currentBooking.status = 'confirmed';
+          
+          // Update in history too
+          const bookingId = state.currentBooking.id;
+          state.bookingHistory = state.bookingHistory.map(booking => 
+            booking.id === bookingId 
+              ? { ...booking, booking_status: 'confirmed', payment_status: 'paid' }
+              : booking
+          );
+        }
       })
       .addCase(processPayment.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
         state.success = false;
+      });
+      
+    // Verify Payment
+    builder
+      .addCase(verifyPayment.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(verifyPayment.fulfilled, (state, action) => {
+        state.loading = false;
+        // Optionally update currentBooking status
+        if (action.payload.data && action.payload.data.status === 'success') {
+           state.currentBooking.payment_status = 'paid';
+           state.currentBooking.booking_status = 'confirmed';
+        }
+      })
+      .addCase(verifyPayment.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
     
     // Fetch Booking History
