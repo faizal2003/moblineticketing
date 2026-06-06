@@ -5,7 +5,7 @@ import { Platform, Alert } from 'react-native';
 const getBaseURL = () => {
   if (__DEV__) {
     if (Platform.OS === 'android') {
-      return ' https://65cf-157-15-41-36.ngrok-free.app/api'; // IP komputer Anda
+      return 'https://5f8f-157-15-41-36.ngrok-free.app'; // IP komputer Anda
     } else {
       return 'http://localhost:8000/api'; // untuk iOS simulator
     }

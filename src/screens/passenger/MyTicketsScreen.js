@@ -72,8 +72,7 @@ const MyTicketsScreen = () => {
   ];
 
   const tabs = [
-    { id: 'active', label: 'Aktif' },
-    { id: 'history', label: 'Riwayat' },
+    { id: 'active', label: 'Tiket Saya' },
   ];
 
   useFocusEffect(
@@ -492,27 +491,7 @@ const MyTicketsScreen = () => {
         />
       </View>
 
-      {/* Tabs */}
-      <View style={styles.tabContainer}>
-        {tabs.map((tab) => (
-          <TouchableOpacity
-            key={tab.id}
-            style={[
-              styles.tabButton,
-              activeTab === tab.id && styles.tabButtonActive,
-            ]}
-            onPress={() => setActiveTab(tab.id)}
-          >
-            <Text style={[
-              styles.tabText,
-              activeTab === tab.id && styles.tabTextActive,
-            ]}>
-              {tab.label}
-            </Text>
-            {activeTab === tab.id && <View style={styles.tabIndicator} />}
-          </TouchableOpacity>
-        ))}
-      </View>
+
 
       {/* Active Filter */}
       {filter !== 'all' && (

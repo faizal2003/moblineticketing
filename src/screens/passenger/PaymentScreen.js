@@ -112,15 +112,7 @@ const PaymentScreen = () => {
       color: '#FF9800',
       popular: true,
     },
-    {
-      id: 'credit_card',
-      name: 'Kartu Kredit',
-      icon: 'credit-card',
-      type: FontAwesome5,
-      description: 'Visa, MasterCard, JCB',
-      color: '#2196F3',
-      popular: false,
-    },
+
     {
       id: 'cash',
       name: 'Bayar di Tempat',

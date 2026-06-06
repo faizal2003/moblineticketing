@@ -30,16 +30,45 @@ export default function PassengerHome({ navigation }) {
     origin: '',
     destination: '',
     date: new Date(),
+    passengers: 1,
   });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [popularRoutes, setPopularRoutes] = useState([]);
-  const [recentBookings, setRecentBookings] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [availableRoutes, setAvailableRoutes] = useState([]);
+  const [showOriginDropdown, setShowOriginDropdown] = useState(false);
+  const [showDestinationDropdown, setShowDestinationDropdown] = useState(false);
 
   useEffect(() => {
     fetchPopularRoutes();
-    fetchRecentBookings();
+    fetchAvailableRoutes();
   }, []);
+
+  const fetchAvailableRoutes = async () => {
+    try {
+      const response = await busService.getRoutes();
+      setAvailableRoutes(response.data.data);
+    } catch (error) {
+      console.error('Error fetching routes:', error);
+    }
+  };
+
+  const getFilteredOrigins = () => {
+    const origins = [...new Set(availableRoutes.map(route => route.origin_city))];
+    if (!searchParams.origin) return origins;
+    return origins.filter(city => city.toLowerCase().includes(searchParams.origin.toLowerCase()));
+  };
+
+  const getFilteredDestinations = () => {
+    let destinations = availableRoutes;
+    if (searchParams.origin) {
+      destinations = destinations.filter(route => route.origin_city.toLowerCase() === searchParams.origin.toLowerCase());
+    }
+    const uniqueDestinations = [...new Set(destinations.map(route => route.destination_city))];
+    
+    if (!searchParams.destination) return uniqueDestinations;
+    return uniqueDestinations.filter(city => city.toLowerCase().includes(searchParams.destination.toLowerCase()));
+  };
 
   const fetchPopularRoutes = async () => {
     try {
@@ -48,15 +77,6 @@ export default function PassengerHome({ navigation }) {
       setPopularRoutes(response.data.data);
     } catch (error) {
       console.error('Error fetching popular routes:', error);
-    }
-  };
-
-  const fetchRecentBookings = async () => {
-    try {
-      const response = await busService.getMyBookings();
-      setRecentBookings(response.data.data.slice(0, 3));
-    } catch (error) {
-      console.error('Error fetching recent bookings:', error);
     }
   };
 
@@ -92,7 +112,7 @@ export default function PassengerHome({ navigation }) {
         departure: searchParams.origin,
         destination: searchParams.destination,
         departureDate: searchParams.date.toISOString(),
-        passengers: 1,
+        passengers: searchParams.passengers,
       };
 
       // Update search params in Redux
@@ -183,8 +203,8 @@ export default function PassengerHome({ navigation }) {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Hello, {user?.name}</Text>
-            <Text style={styles.subGreeting}>Where do you want to go?</Text>
+            <Text style={styles.greeting}>Halo, {user?.name}</Text>
+            <Text style={styles.subGreeting}>Mau pergi ke mana?</Text>
           </View>
           <View style={styles.headerButtons}>
             <TouchableOpacity onPress={() => navigation.navigate('MyTickets')} style={styles.headerIcon}>
@@ -198,29 +218,79 @@ export default function PassengerHome({ navigation }) {
 
         {/* Search Section */}
         <View style={styles.searchSection}>
-          <View style={styles.searchInputContainer}>
-            <Icon name="location-on" size={20} color="#1E88E5" style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="From"
-              placeholderTextColor="#999"
-              value={searchParams.origin}
-              onChangeText={(text) => setSearchParams({ ...searchParams, origin: text })}
-            />
+          <View style={{ zIndex: 2 }}>
+            <View style={styles.searchInputContainer}>
+              <Icon name="location-on" size={20} color="#1E88E5" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Asal (Misal: Surabaya)"
+                placeholderTextColor="#999"
+                value={searchParams.origin}
+                onChangeText={(text) => {
+                  setSearchParams({ ...searchParams, origin: text });
+                  setShowOriginDropdown(true);
+                }}
+                onFocus={() => {
+                  setShowOriginDropdown(true);
+                  setShowDestinationDropdown(false);
+                }}
+              />
+            </View>
+            {showOriginDropdown && getFilteredOrigins().length > 0 && (
+              <View style={styles.dropdownContainer}>
+                {getFilteredOrigins().map((city, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.dropdownItem}
+                    onPress={() => {
+                      setSearchParams({ ...searchParams, origin: city });
+                      setShowOriginDropdown(false);
+                    }}
+                  >
+                    <Text style={styles.dropdownText}>{city}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
           
-          <View style={styles.searchInputContainer}>
-            <Icon name="location-on" size={20} color="#1E88E5" style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="To"
-              placeholderTextColor="#999"
-              value={searchParams.destination}
-              onChangeText={(text) => setSearchParams({ ...searchParams, destination: text })}
-            />
+          <View style={{ zIndex: 1, marginTop: 12 }}>
+            <View style={styles.searchInputContainer}>
+              <Icon name="location-on" size={20} color="#1E88E5" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Tujuan"
+                placeholderTextColor="#999"
+                value={searchParams.destination}
+                onChangeText={(text) => {
+                  setSearchParams({ ...searchParams, destination: text });
+                  setShowDestinationDropdown(true);
+                }}
+                onFocus={() => {
+                  setShowDestinationDropdown(true);
+                  setShowOriginDropdown(false);
+                }}
+              />
+            </View>
+            {showDestinationDropdown && getFilteredDestinations().length > 0 && (
+              <View style={styles.dropdownContainer}>
+                {getFilteredDestinations().map((city, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.dropdownItem}
+                    onPress={() => {
+                      setSearchParams({ ...searchParams, destination: city });
+                      setShowDestinationDropdown(false);
+                    }}
+                  >
+                    <Text style={styles.dropdownText}>{city}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
           
-          <View style={styles.searchInputContainer}>
+          <View style={[styles.searchInputContainer, { marginTop: 12 }]}>
             <Icon name="calendar-today" size={20} color="#1E88E5" style={styles.searchIcon} />
             <TouchableOpacity 
               style={styles.searchInput} 
@@ -231,6 +301,28 @@ export default function PassengerHome({ navigation }) {
               </Text>
             </TouchableOpacity>
           </View>
+          
+          <View style={[styles.searchInputContainer, { marginTop: 12, justifyContent: 'space-between' }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Icon name="person" size={20} color="#1E88E5" style={styles.searchIcon} />
+              <Text style={{ fontSize: 16, color: '#333' }}>Jumlah Penumpang</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity 
+                style={styles.passengerBtn} 
+                onPress={() => setSearchParams(prev => ({...prev, passengers: Math.max(1, prev.passengers - 1)}))}
+              >
+                <Icon name="remove" size={20} color="#1E88E5" />
+              </TouchableOpacity>
+              <Text style={{ fontSize: 16, color: '#333', marginHorizontal: 16 }}>{searchParams.passengers}</Text>
+              <TouchableOpacity 
+                style={styles.passengerBtn} 
+                onPress={() => setSearchParams(prev => ({...prev, passengers: Math.min(4, prev.passengers + 1)}))}
+              >
+                <Icon name="add" size={20} color="#1E88E5" />
+              </TouchableOpacity>
+            </View>
+          </View>
 
           <TouchableOpacity 
             style={[styles.searchButton, isSearching && { backgroundColor: '#90CAF9' }]} 
@@ -240,7 +332,7 @@ export default function PassengerHome({ navigation }) {
             {isSearching ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.searchButtonText}>Search Bus</Text>
+              <Text style={styles.searchButtonText}>Cari Bus</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -248,9 +340,9 @@ export default function PassengerHome({ navigation }) {
         {/* Popular Routes */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Popular Routes</Text>
+            <Text style={styles.sectionTitle}>Rute Populer</Text>
             <TouchableOpacity onPress={() => navigation.navigate('SearchBus')}>
-              <Text style={styles.seeAll}>See All</Text>
+              <Text style={styles.seeAll}>Lihat Semua</Text>
             </TouchableOpacity>
           </View>
           <FlatList
@@ -261,23 +353,7 @@ export default function PassengerHome({ navigation }) {
           />
         </View>
 
-        {/* Recent Bookings */}
-        {recentBookings.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Recent Bookings</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('MyTickets')}>
-                <Text style={styles.seeAll}>See All</Text>
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={recentBookings}
-              renderItem={renderRecentBooking}
-              keyExtractor={(item, index) => item.id?.toString() || index.toString()}
-              scrollEnabled={false}
-            />
-          </View>
-        )}
+
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
@@ -285,21 +361,21 @@ export default function PassengerHome({ navigation }) {
             <View style={[styles.quickActionIcon, { backgroundColor: '#E3F2FD' }]}>
               <Icon name="confirmation-number" size={24} color="#1E88E5" />
             </View>
-            <Text style={styles.quickActionText}>My Tickets</Text>
+            <Text style={styles.quickActionText}>Tiket Saya</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.quickAction}>
+          <TouchableOpacity style={styles.quickAction} onPress={() => navigation.navigate('MyTickets')}>
             <View style={[styles.quickActionIcon, { backgroundColor: '#F3E5F5' }]}>
               <Icon name="history" size={24} color="#7B1FA2" />
             </View>
-            <Text style={styles.quickActionText}>History</Text>
+            <Text style={styles.quickActionText}>Riwayat</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.quickAction}>
+          <TouchableOpacity style={styles.quickAction} onPress={() => navigation.navigate('FAQ')}>
             <View style={[styles.quickActionIcon, { backgroundColor: '#E8F5E8' }]}>
               <Icon name="support-agent" size={24} color="#388E3C" />
             </View>
-            <Text style={styles.quickActionText}>Support</Text>
+            <Text style={styles.quickActionText}>Bantuan (FAQ)</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -377,6 +453,41 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: '#333',
+  },
+  dropdownContainer: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#eee',
+    borderRadius: 8,
+    marginTop: 4,
+    maxHeight: 150,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    position: 'absolute',
+    top: 50,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  dropdownItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  dropdownText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  passengerBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#E3F2FD',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   searchButton: {
     backgroundColor: '#1E88E5',

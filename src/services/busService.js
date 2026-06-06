@@ -42,4 +42,9 @@ export const busService = {
     const response = await api.delete(`/bookings/${bookingId}`);
     return response;
   },
+
+  getRoutes: async () => {
+    const response = await api.get('/routes');
+    return response;
+  },
 };
