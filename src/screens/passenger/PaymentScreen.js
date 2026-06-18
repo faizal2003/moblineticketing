@@ -204,6 +204,8 @@ const PaymentScreen = () => {
     }).start();
 
     return () => clearInterval(timer);
+    // Run once on mount: start the countdown timer and fade-in animation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -211,7 +213,7 @@ const PaymentScreen = () => {
       Alert.alert('Error', error);
       dispatch(clearError());
     }
-  }, [error]);
+  }, [error, dispatch]);
 
   const formatTime = seconds => {
     const mins = Math.floor(seconds / 60);
