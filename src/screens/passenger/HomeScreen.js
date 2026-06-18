@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Platform,
   StatusBar,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
@@ -63,6 +64,7 @@ export default function PassengerHome({ navigation }) {
   const [availableRoutes, setAvailableRoutes] = useState([]);
   const [showOriginDropdown, setShowOriginDropdown] = useState(false);
   const [showDestinationDropdown, setShowDestinationDropdown] = useState(false);
+  const [showAllPopularModal, setShowAllPopularModal] = useState(false);
 
   useEffect(() => {
     fetchPopularRoutes();
@@ -495,7 +497,7 @@ export default function PassengerHome({ navigation }) {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Rute Populer</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('SearchBus')}>
+            <TouchableOpacity onPress={() => setShowAllPopularModal(true)}>
               <Text style={styles.seeAll}>Lihat semua</Text>
             </TouchableOpacity>
           </View>
@@ -527,6 +529,70 @@ export default function PassengerHome({ navigation }) {
         onCancel={() => setShowDatePicker(false)}
         minimumDate={new Date()}
       />
+
+      {/* All Popular Routes Modal (ordered by popularity) */}
+      <Modal
+        visible={showAllPopularModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAllPopularModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.popularModalContainer}>
+            <View style={styles.popularModalHeader}>
+              <Text style={styles.popularModalTitle}>Rute Populer</Text>
+              <TouchableOpacity onPress={() => setShowAllPopularModal(false)}>
+                <Icon name="close" size={24} color={C.textSub} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.popularModalSubtitle}>
+              Diurutkan berdasarkan jumlah pemesanan
+            </Text>
+
+            <FlatList
+              data={popularRoutes}
+              keyExtractor={(item, index) =>
+                item.id?.toString() || index.toString()
+              }
+              ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+              contentContainerStyle={styles.popularModalList}
+              ListEmptyComponent={
+                <Text style={styles.popularEmptyText}>
+                  Belum ada rute populer
+                </Text>
+              }
+              renderItem={({ item, index }) => (
+                <TouchableOpacity
+                  style={styles.popularRankCard}
+                  activeOpacity={0.75}
+                  onPress={() => {
+                    setShowAllPopularModal(false);
+                    handleQuickRoute(item);
+                  }}
+                >
+                  <View style={styles.popularRankBadge}>
+                    <Text style={styles.popularRankText}>{index + 1}</Text>
+                  </View>
+                  <View style={styles.routeInfo}>
+                    <Text style={styles.routeCities} numberOfLines={1}>
+                      {item.origin} → {item.destination}
+                    </Text>
+                    <Text style={styles.routePrice}>
+                      {item.formatted_price}
+                    </Text>
+                  </View>
+                  <View style={styles.popularCountWrap}>
+                    <Icon name="people" size={14} color={C.textSub} />
+                    <Text style={styles.popularCountText}>
+                      {item.booking_count}x
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -856,5 +922,86 @@ const styles = StyleSheet.create({
     color: C.primary,
     fontWeight: '500',
     marginTop: 3,
+  },
+
+  // ── All Popular Routes Modal ────────────────────────────────────────────────
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  popularModalContainer: {
+    backgroundColor: C.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 16,
+    paddingBottom: 24,
+    maxHeight: '80%',
+  },
+  popularModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  popularModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: C.text,
+  },
+  popularModalSubtitle: {
+    fontSize: 12,
+    color: C.textSub,
+    paddingHorizontal: 20,
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  popularModalList: {
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+  },
+  popularEmptyText: {
+    fontSize: 14,
+    color: C.textMuted,
+    textAlign: 'center',
+    paddingVertical: 30,
+  },
+  popularRankCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.surface,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  popularRankBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: C.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  popularRankText: {
+    color: C.white,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  popularCountWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.surfaceAlt,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  popularCountText: {
+    fontSize: 12,
+    color: C.textSub,
+    fontWeight: '600',
+    marginLeft: 4,
   },
 });

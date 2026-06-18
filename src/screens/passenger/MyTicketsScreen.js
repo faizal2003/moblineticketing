@@ -39,6 +39,7 @@ import {
   selectError,
   clearError,
 } from '../../store/slices/bookingSlice';
+import { busService } from '../../services/busService';
 
 // ─── Color Tokens ─────────────────────────────────────────────────────────────
 const C = {
@@ -84,6 +85,10 @@ const MyTicketsScreen = () => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancellationReason, setCancellationReason] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [refunds, setRefunds] = useState([]);
+  const [refundsLoading, setRefundsLoading] = useState(false);
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [selectedRefund, setSelectedRefund] = useState(null);
   const fadeAnim = useState(new Animated.Value(0))[0];
 
   const ticketFilters = [
@@ -96,6 +101,7 @@ const MyTicketsScreen = () => {
   useFocusEffect(
     useCallback(() => {
       loadTickets();
+      loadRefunds();
       return () => {};
     }, []),
   );
@@ -112,7 +118,15 @@ const MyTicketsScreen = () => {
   }, [error, historyError]);
 
   const loadTickets = () => {
-    dispatch(fetchBookingHistory());
+    dispatch(fetchBookingHistory()).then(result => {
+      console.log('Booking history result:', JSON.stringify(result, null, 2));
+      if (result.payload?.data) {
+        console.log(
+          'Bookings data:',
+          JSON.stringify(result.payload.data, null, 2),
+        );
+      }
+    });
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 500,
@@ -120,11 +134,71 @@ const MyTicketsScreen = () => {
     }).start();
   };
 
+  const loadRefunds = async () => {
+    try {
+      setRefundsLoading(true);
+      const response = await busService.getRefunds();
+      if (response.data.status === 'success') {
+        setRefunds(response.data.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading refunds:', error);
+    } finally {
+      setRefundsLoading(false);
+    }
+  };
+
   const onRefresh = () => {
     setRefreshing(true);
-    dispatch(fetchBookingHistory()).finally(() => {
-      setRefreshing(false);
-    });
+    Promise.all([dispatch(fetchBookingHistory()), loadRefunds()]).finally(
+      () => {
+        setRefreshing(false);
+      },
+    );
+  };
+
+  const getRefundStatusColor = status => {
+    switch (status) {
+      case 'approved':
+        return C.green;
+      case 'pending':
+        return C.amber;
+      case 'rejected':
+        return C.red;
+      default:
+        return C.textMuted;
+    }
+  };
+
+  const getRefundStatusText = status => {
+    switch (status) {
+      case 'approved':
+        return 'Disetujui';
+      case 'pending':
+        return 'Menunggu';
+      case 'rejected':
+        return 'Ditolak';
+      default:
+        return status;
+    }
+  };
+
+  const handleViewRefund = async refund => {
+    try {
+      const response = await busService.getRefundDetail(refund.id);
+      if (response.data.status === 'success') {
+        setSelectedRefund(response.data.data);
+        setShowRefundModal(true);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Gagal memuat detail refund');
+    }
+  };
+
+  // Find a refund request that belongs to a given booking code
+  const getRefundForBooking = bookingCode => {
+    if (!bookingCode || !Array.isArray(refunds)) return null;
+    return refunds.find(r => r.booking_code === bookingCode) || null;
   };
 
   const getStatusColor = status => {
@@ -162,9 +236,15 @@ const MyTicketsScreen = () => {
   };
 
   const getFilteredTickets = () => {
-    if (!bookingHistory || !Array.isArray(bookingHistory)) return [];
+    // Add safety check for bookingHistory
+    if (!bookingHistory || !Array.isArray(bookingHistory)) {
+      return [];
+    }
 
-    let filtered = [...bookingHistory];
+    // Filter out any invalid bookings
+    let filtered = bookingHistory.filter(ticket => {
+      return ticket && ticket.id && ticket.booking_code;
+    });
 
     if (filter !== 'all') {
       switch (filter) {
@@ -190,23 +270,35 @@ const MyTicketsScreen = () => {
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        ticket =>
-          ticket.booking_code?.toLowerCase().includes(query) ||
-          ticket.schedule?.bus_name?.toLowerCase().includes(query) ||
-          ticket.schedule?.departure_city?.toLowerCase().includes(query) ||
-          ticket.schedule?.arrival_city?.toLowerCase().includes(query),
-      );
+      filtered = filtered.filter(ticket => {
+        const bookingCode = ticket.booking_code?.toLowerCase() || '';
+        const busName = ticket.schedule?.bus_name?.toLowerCase() || '';
+        const departureCity =
+          ticket.schedule?.departure_city?.toLowerCase() || '';
+        const arrivalCity = ticket.schedule?.arrival_city?.toLowerCase() || '';
+
+        return (
+          bookingCode.includes(query) ||
+          busName.includes(query) ||
+          departureCity.includes(query) ||
+          arrivalCity.includes(query)
+        );
+      });
     }
 
+    // Sort by created_at date
     return filtered.sort((a, b) => {
-      const dateA = a.created_at
-        ? new Date(a.created_at.replace(' ', 'T'))
-        : new Date(0);
-      const dateB = b.created_at
-        ? new Date(b.created_at.replace(' ', 'T'))
-        : new Date(0);
-      return dateB.getTime() - dateA.getTime();
+      try {
+        const dateA = a.created_at
+          ? new Date(a.created_at.replace(' ', 'T'))
+          : new Date(0);
+        const dateB = b.created_at
+          ? new Date(b.created_at.replace(' ', 'T'))
+          : new Date(0);
+        return dateB.getTime() - dateA.getTime();
+      } catch (error) {
+        return 0;
+      }
     });
   };
 
@@ -285,166 +377,235 @@ const MyTicketsScreen = () => {
     </View>
   );
 
-  const renderTicketCard = ({ item }) => (
-    <Animated.View style={{ opacity: fadeAnim }}>
-      <TouchableOpacity
-        style={styles.ticketCard}
-        onPress={() => handleTicketPress(item)}
-        onLongPress={() => {
-          setSelectedTicket(item);
-          setShowActionModal(true);
-        }}
-        activeOpacity={0.75}
-      >
-        <View style={styles.ticketHeader}>
-          <View style={styles.ticketIdContainer}>
-            <Text style={styles.ticketId}>{item.booking_code}</Text>
-            <View
-              style={[
-                styles.statusBadge,
-                { backgroundColor: getStatusColor(item.booking_status) },
-              ]}
-            >
-              <Text style={styles.statusText}>
-                {getStatusText(item.booking_status)}
-              </Text>
-            </View>
-          </View>
-          <Text style={styles.bookingDate}>
-            {item.created_at ? formatShortDate(item.created_at) : '-'}
-          </Text>
-        </View>
+  const renderTicketCard = ({ item }) => {
+    // Add null/undefined safety checks
+    if (!item || !item.id) {
+      return null;
+    }
 
-        <View style={styles.routeContainer}>
-          <View style={styles.routeDotLine}>
-            <View style={styles.routeDot} />
-            <View style={styles.routeLine} />
-            <View style={[styles.routeDot, styles.destinationDot]} />
-          </View>
-          <View style={styles.routeDetails}>
-            <View style={styles.routeStop}>
-              <View>
-                <Text style={styles.cityName}>
-                  {item.schedule?.departure_city}
-                </Text>
-                <Text style={styles.terminalName}>Terminal Keberangkatan</Text>
-              </View>
-              <Text style={styles.timeText}>
-                {item.schedule?.departure_time
-                  ? new Date(item.schedule.departure_time).toLocaleTimeString(
-                      [],
-                      { hour: '2-digit', minute: '2-digit' },
-                    )
-                  : '--:--'}
-              </Text>
-            </View>
-            <View style={styles.durationContainer}>
-              <View style={styles.durationBadge}>
-                <Ionicons name="time-outline" size={12} color={C.primary} />
-                <Text style={styles.durationText}>
-                  {item.schedule?.duration || 'Perjalanan'}
+    // Safely access nested properties with defaults
+    const schedule = item.schedule || {};
+    const departureCity = schedule.departure_city || '-';
+    const arrivalCity = schedule.arrival_city || '-';
+    const busName = schedule.bus_name || 'Bus';
+    const duration = schedule.duration || 'Perjalanan';
+    const departureTime = schedule.departure_time;
+    const arrivalTime = schedule.arrival_time;
+    const totalPassengers = item.total_passengers || 1;
+    const totalPrice = parseFloat(item.total_price || 0);
+    const seats = Array.isArray(item.seats) ? item.seats : [];
+    const bookingCode = item.booking_code || 'N/A';
+    const bookingStatus = item.booking_status || 'pending';
+    const createdAt = item.created_at;
+    const refundInfo = getRefundForBooking(bookingCode);
+
+    return (
+      <View>
+        <TouchableOpacity
+          style={styles.ticketCard}
+          onPress={() => handleTicketPress(item)}
+          onLongPress={() => {
+            setSelectedTicket(item);
+            setShowActionModal(true);
+          }}
+          activeOpacity={0.75}
+        >
+          <View style={styles.ticketHeader}>
+            <View style={styles.ticketIdContainer}>
+              <Text style={styles.ticketId}>{bookingCode}</Text>
+              <View
+                style={[
+                  styles.statusBadge,
+                  { backgroundColor: getStatusColor(bookingStatus) },
+                ]}
+              >
+                <Text style={styles.statusText}>
+                  {getStatusText(bookingStatus)}
                 </Text>
               </View>
             </View>
-            <View style={styles.routeStop}>
-              <View>
-                <Text style={styles.cityName}>
-                  {item.schedule?.arrival_city}
-                </Text>
-                <Text style={styles.terminalName}>Terminal Kedatangan</Text>
-              </View>
-              <Text style={styles.timeText}>
-                {item.schedule?.arrival_time
-                  ? new Date(item.schedule.arrival_time).toLocaleTimeString(
-                      [],
-                      { hour: '2-digit', minute: '2-digit' },
-                    )
-                  : '--:--'}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.detailsContainer}>
-          <View style={styles.detailRow}>
-            <View style={styles.detailItem}>
-              <View style={styles.detailIconWrap}>
-                <Ionicons name="bus-outline" size={14} color={C.primary} />
-              </View>
-              <Text style={styles.detailLabel}>Bus</Text>
-              <Text style={styles.detailValue} numberOfLines={1}>
-                {item.schedule?.bus_name || 'Bus'}
-              </Text>
-            </View>
-            <View style={styles.detailItem}>
-              <View style={styles.detailIconWrap}>
-                <Ionicons name="people-outline" size={14} color={C.primary} />
-              </View>
-              <Text style={styles.detailLabel}>Penumpang</Text>
-              <Text style={styles.detailValue}>
-                {item.total_passengers || 1}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.detailRow}>
-            <View style={styles.detailItem}>
-              <View style={styles.detailIconWrap}>
-                <Ionicons name="calendar-outline" size={14} color={C.primary} />
-              </View>
-              <Text style={styles.detailLabel}>Berangkat</Text>
-              <Text style={styles.detailValue}>
-                {item.schedule?.departure_time
-                  ? formatShortDate(item.schedule.departure_time)
-                  : '-'}
-              </Text>
-            </View>
-            <View style={styles.detailItem}>
-              <View style={styles.detailIconWrap}>
-                <Ionicons name="cash-outline" size={14} color={C.primary} />
-              </View>
-              <Text style={styles.detailLabel}>Total</Text>
-              <Text style={styles.detailValue}>
-                Rp {parseFloat(item.total_price || 0).toLocaleString('id-ID')}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.ticketFooter}>
-          <View style={styles.seatsContainer}>
-            <Ionicons name="grid-outline" size={14} color={C.textSub} />
-            <Text style={styles.seatsText}>
-              Kursi: {item.seats?.join(', ') || '-'}
+            <Text style={styles.bookingDate}>
+              {createdAt ? formatShortDate(createdAt) : '-'}
             </Text>
           </View>
-          <View style={styles.actionButtons}>
-            {item.booking_status === 'confirmed' && (
-              <TouchableOpacity
-                style={styles.viewButton}
-                onPress={() => handleTicketPress(item)}
-              >
-                <Text style={styles.viewButtonText}>Lihat</Text>
-                <Ionicons name="chevron-forward" size={16} color={C.primary} />
-              </TouchableOpacity>
-            )}
-            {item.booking_status === 'pending' && (
-              <TouchableOpacity
-                style={styles.payButton}
-                onPress={() =>
-                  navigation.navigate('Payment', {
-                    bookingId: item.id,
-                    totalAmount: parseFloat(item.total_price),
-                  })
-                }
-              >
-                <Text style={styles.payButtonText}>Bayar</Text>
-              </TouchableOpacity>
-            )}
+
+          <View style={styles.routeContainer}>
+            <View style={styles.routeDotLine}>
+              <View style={styles.routeDot} />
+              <View style={styles.routeLine} />
+              <View style={[styles.routeDot, styles.destinationDot]} />
+            </View>
+            <View style={styles.routeDetails}>
+              <View style={styles.routeStop}>
+                <View>
+                  <Text style={styles.cityName}>{departureCity}</Text>
+                  <Text style={styles.terminalName}>
+                    Terminal Keberangkatan
+                  </Text>
+                </View>
+                <Text style={styles.timeText}>
+                  {departureTime
+                    ? new Date(departureTime).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : '--:--'}
+                </Text>
+              </View>
+              <View style={styles.durationContainer}>
+                <View style={styles.durationBadge}>
+                  <Ionicons name="time-outline" size={12} color={C.primary} />
+                  <Text style={styles.durationText}>{duration}</Text>
+                </View>
+              </View>
+              <View style={styles.routeStop}>
+                <View>
+                  <Text style={styles.cityName}>{arrivalCity}</Text>
+                  <Text style={styles.terminalName}>Terminal Kedatangan</Text>
+                </View>
+                <Text style={styles.timeText}>
+                  {arrivalTime
+                    ? new Date(arrivalTime).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : '--:--'}
+                </Text>
+              </View>
+            </View>
           </View>
-        </View>
-      </TouchableOpacity>
-    </Animated.View>
-  );
+
+          <View style={styles.detailsContainer}>
+            <View style={styles.detailRow}>
+              <View style={styles.detailItem}>
+                <View style={styles.detailIconWrap}>
+                  <Ionicons name="bus-outline" size={14} color={C.primary} />
+                </View>
+                <Text style={styles.detailLabel}>Bus</Text>
+                <Text style={styles.detailValue} numberOfLines={1}>
+                  {busName}
+                </Text>
+              </View>
+              <View style={styles.detailItem}>
+                <View style={styles.detailIconWrap}>
+                  <Ionicons name="people-outline" size={14} color={C.primary} />
+                </View>
+                <Text style={styles.detailLabel}>Penumpang</Text>
+                <Text style={styles.detailValue}>{totalPassengers}</Text>
+              </View>
+            </View>
+            <View style={styles.detailRow}>
+              <View style={styles.detailItem}>
+                <View style={styles.detailIconWrap}>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={14}
+                    color={C.primary}
+                  />
+                </View>
+                <Text style={styles.detailLabel}>Berangkat</Text>
+                <Text style={styles.detailValue}>
+                  {departureTime ? formatShortDate(departureTime) : '-'}
+                </Text>
+              </View>
+              <View style={styles.detailItem}>
+                <View style={styles.detailIconWrap}>
+                  <Ionicons name="cash-outline" size={14} color={C.primary} />
+                </View>
+                <Text style={styles.detailLabel}>Total</Text>
+                <Text style={styles.detailValue}>
+                  Rp {totalPrice.toLocaleString('id-ID')}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.ticketFooter}>
+            <View style={styles.seatsContainer}>
+              <Ionicons name="grid-outline" size={14} color={C.textSub} />
+              <Text style={styles.seatsText}>
+                Kursi: {seats.length > 0 ? seats.join(', ') : '-'}
+              </Text>
+            </View>
+            <View style={styles.actionButtons}>
+              {bookingStatus === 'confirmed' && (
+                <TouchableOpacity
+                  style={styles.viewButton}
+                  onPress={() => handleTicketPress(item)}
+                >
+                  <Text style={styles.viewButtonText}>Lihat</Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={16}
+                    color={C.primary}
+                  />
+                </TouchableOpacity>
+              )}
+              {bookingStatus === 'pending' && (
+                <TouchableOpacity
+                  style={styles.payButton}
+                  onPress={() =>
+                    navigation.navigate('Payment', {
+                      bookingId: item.id,
+                      totalAmount: totalPrice,
+                    })
+                  }
+                >
+                  <Text style={styles.payButtonText}>Bayar</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {/* Inline refund status for cancelled bookings */}
+          {refundInfo && (
+            <TouchableOpacity
+              style={[
+                styles.refundBanner,
+                {
+                  backgroundColor:
+                    refundInfo.status === 'approved'
+                      ? C.greenLight
+                      : refundInfo.status === 'rejected'
+                      ? C.redLight
+                      : C.amberLight,
+                  borderColor: getRefundStatusColor(refundInfo.status),
+                },
+              ]}
+              onPress={() => handleViewRefund(refundInfo)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.refundBannerLeft}>
+                <Ionicons
+                  name="cash-outline"
+                  size={16}
+                  color={getRefundStatusColor(refundInfo.status)}
+                />
+                <View style={styles.refundBannerTextWrap}>
+                  <Text
+                    style={[
+                      styles.refundBannerTitle,
+                      { color: getRefundStatusColor(refundInfo.status) },
+                    ]}
+                  >
+                    Refund {getRefundStatusText(refundInfo.status)}
+                  </Text>
+                  <Text style={styles.refundBannerAmount}>
+                    {refundInfo.formatted_amount}
+                  </Text>
+                </View>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={16}
+                color={getRefundStatusColor(refundInfo.status)}
+              />
+            </TouchableOpacity>
+          )}
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   const renderFilterButton = filterItem => (
     <TouchableOpacity
@@ -522,6 +683,8 @@ const MyTicketsScreen = () => {
         />
       </View>
 
+      {/* Refund status is now shown inline within each ticket card below */}
+
       {filter !== 'all' && (
         <View style={styles.activeFilterContainer}>
           <Text style={styles.activeFilterText}>
@@ -541,6 +704,7 @@ const MyTicketsScreen = () => {
           item.booking_code?.toString() ||
           index.toString()
         }
+        style={styles.ticketList}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -559,6 +723,9 @@ const MyTicketsScreen = () => {
             </Text>
           ) : null
         }
+        removeClippedSubviews={false}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
       />
 
       <Modal
@@ -721,6 +888,204 @@ const MyTicketsScreen = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Refund Detail Modal */}
+      <Modal
+        visible={showRefundModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowRefundModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.refundModalContainer}>
+            <View style={styles.refundModalHeader}>
+              <Text style={styles.refundModalTitle}>Detail Refund</Text>
+              <TouchableOpacity onPress={() => setShowRefundModal(false)}>
+                <Ionicons name="close" size={24} color={C.textSub} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.refundModalContent}>
+              {selectedRefund && (
+                <>
+                  <View style={styles.refundModalSection}>
+                    <Text style={styles.refundModalLabel}>Kode Booking</Text>
+                    <Text style={styles.refundModalValue}>
+                      {selectedRefund.booking_code}
+                    </Text>
+                  </View>
+
+                  <View style={styles.refundModalSection}>
+                    <Text style={styles.refundModalLabel}>Rute Perjalanan</Text>
+                    <View style={styles.refundModalRoute}>
+                      <Text style={styles.refundModalRouteText}>
+                        {selectedRefund.booking?.schedule?.departure_city}
+                      </Text>
+                      <Ionicons
+                        name="arrow-forward"
+                        size={16}
+                        color={C.textSub}
+                      />
+                      <Text style={styles.refundModalRouteText}>
+                        {selectedRefund.booking?.schedule?.arrival_city}
+                      </Text>
+                    </View>
+                    <Text style={styles.refundModalBusName}>
+                      {selectedRefund.booking?.schedule?.bus_name}
+                    </Text>
+                  </View>
+
+                  <View style={styles.refundModalSection}>
+                    <Text style={styles.refundModalLabel}>Penumpang</Text>
+                    {selectedRefund.booking?.passengers?.map(
+                      (passenger, index) => (
+                        <View key={index} style={styles.refundPassengerItem}>
+                          <Ionicons
+                            name="person-outline"
+                            size={14}
+                            color={C.textSub}
+                          />
+                          <Text style={styles.refundPassengerText}>
+                            {passenger.name} (Kursi {passenger.seat_number})
+                          </Text>
+                        </View>
+                      ),
+                    )}
+                  </View>
+
+                  <View style={styles.refundModalSection}>
+                    <Text style={styles.refundModalLabel}>Jumlah Refund</Text>
+                    <Text style={styles.refundModalAmount}>
+                      {selectedRefund.formatted_amount}
+                    </Text>
+                  </View>
+
+                  <View style={styles.refundModalSection}>
+                    <Text style={styles.refundModalLabel}>Status</Text>
+                    <View
+                      style={[
+                        styles.refundModalStatusBadge,
+                        {
+                          backgroundColor: getRefundStatusColor(
+                            selectedRefund.status,
+                          ),
+                        },
+                      ]}
+                    >
+                      <Text style={styles.refundModalStatusText}>
+                        {getRefundStatusText(selectedRefund.status)}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.refundModalSection}>
+                    <Text style={styles.refundModalLabel}>
+                      Alasan Pembatalan
+                    </Text>
+                    <Text style={styles.refundModalReason}>
+                      {selectedRefund.reason}
+                    </Text>
+                  </View>
+
+                  {selectedRefund.admin_notes && (
+                    <View style={styles.refundModalSection}>
+                      <Text style={styles.refundModalLabel}>Catatan Admin</Text>
+                      <View
+                        style={[
+                          styles.refundModalNotesBox,
+                          {
+                            backgroundColor:
+                              selectedRefund.status === 'approved'
+                                ? C.greenLight
+                                : C.redLight,
+                            borderColor:
+                              selectedRefund.status === 'approved'
+                                ? C.green
+                                : C.red,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.refundModalNotes,
+                            {
+                              color:
+                                selectedRefund.status === 'approved'
+                                  ? C.green
+                                  : C.red,
+                            },
+                          ]}
+                        >
+                          {selectedRefund.admin_notes}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  <View style={styles.refundModalSection}>
+                    <Text style={styles.refundModalLabel}>
+                      Tanggal Pengajuan
+                    </Text>
+                    <Text style={styles.refundModalDate}>
+                      {selectedRefund.created_at
+                        ? formatShortDate(selectedRefund.created_at)
+                        : '-'}
+                    </Text>
+                  </View>
+
+                  {selectedRefund.processed_at && (
+                    <View style={styles.refundModalSection}>
+                      <Text style={styles.refundModalLabel}>
+                        Tanggal Diproses
+                      </Text>
+                      <Text style={styles.refundModalDate}>
+                        {formatShortDate(selectedRefund.processed_at)}
+                      </Text>
+                    </View>
+                  )}
+
+                  {selectedRefund.status === 'approved' && (
+                    <View style={styles.refundInfoBox}>
+                      <Ionicons
+                        name="information-circle"
+                        size={20}
+                        color={C.green}
+                      />
+                      <Text style={styles.refundInfoText}>
+                        Dana akan dikembalikan dalam 3-5 hari kerja ke rekening
+                        Anda.
+                      </Text>
+                    </View>
+                  )}
+
+                  {selectedRefund.status === 'pending' && (
+                    <View
+                      style={[
+                        styles.refundInfoBox,
+                        { backgroundColor: C.amberLight, borderColor: C.amber },
+                      ]}
+                    >
+                      <Ionicons name="time-outline" size={20} color={C.amber} />
+                      <Text style={[styles.refundInfoText, { color: C.amber }]}>
+                        Refund Anda sedang diproses oleh admin. Mohon ditunggu.
+                      </Text>
+                    </View>
+                  )}
+                </>
+              )}
+            </ScrollView>
+
+            <View style={styles.refundModalFooter}>
+              <TouchableOpacity
+                style={styles.refundModalCloseButton}
+                onPress={() => setShowRefundModal(false)}
+              >
+                <Text style={styles.refundModalCloseButtonText}>Tutup</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -802,6 +1167,12 @@ const styles = StyleSheet.create({
   listContainer: {
     padding: 16,
     paddingBottom: 32,
+    backgroundColor: C.surface,
+    flexGrow: 1,
+  },
+  ticketList: {
+    flex: 1,
+    backgroundColor: C.surface,
   },
   listHeader: {
     fontSize: 13,
@@ -1219,6 +1590,253 @@ const styles = StyleSheet.create({
   confirmCancelButtonText: {
     color: C.white,
     fontSize: 14,
+    fontWeight: '600',
+  },
+  refundSection: {
+    backgroundColor: C.white,
+    marginHorizontal: 16,
+    marginTop: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.border,
+    flexShrink: 0,
+    maxHeight: 180,
+  },
+  refundBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  refundBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  refundBannerTextWrap: {
+    marginLeft: 8,
+  },
+  refundBannerTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  refundBannerAmount: {
+    fontSize: 12,
+    color: C.textSub,
+    marginTop: 1,
+  },
+  refundHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    marginBottom: 10,
+  },
+  refundHeaderText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: C.text,
+    marginLeft: 8,
+  },
+  refundScrollContent: {
+    paddingHorizontal: 14,
+  },
+  refundCard: {
+    backgroundColor: C.surface,
+    borderRadius: 12,
+    padding: 12,
+    marginRight: 12,
+    width: 220,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  refundCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  refundBookingCode: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: C.text,
+  },
+  refundStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  refundStatusText: {
+    color: C.white,
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  refundCardBody: {
+    marginBottom: 8,
+  },
+  refundRoute: {
+    fontSize: 12,
+    color: C.textSub,
+    marginBottom: 4,
+  },
+  refundAmount: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: C.primary,
+    marginBottom: 4,
+  },
+  refundDate: {
+    fontSize: 11,
+    color: C.textMuted,
+  },
+  refundPendingNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.amberLight,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  refundPendingText: {
+    fontSize: 11,
+    color: C.amber,
+    marginLeft: 4,
+    fontWeight: '500',
+  },
+  refundModalContainer: {
+    backgroundColor: C.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '90%',
+  },
+  refundModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  refundModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: C.text,
+  },
+  refundModalContent: {
+    padding: 16,
+  },
+  refundModalSection: {
+    marginBottom: 20,
+  },
+  refundModalLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: C.textSub,
+    marginBottom: 6,
+  },
+  refundModalValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: C.text,
+  },
+  refundModalRoute: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  refundModalRouteText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: C.text,
+  },
+  refundModalBusName: {
+    fontSize: 13,
+    color: C.textSub,
+  },
+  refundPassengerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: C.surface,
+    borderRadius: 8,
+    marginBottom: 6,
+  },
+  refundPassengerText: {
+    fontSize: 13,
+    color: C.text,
+    marginLeft: 8,
+  },
+  refundModalAmount: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: C.primary,
+  },
+  refundModalStatusBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  refundModalStatusText: {
+    color: C.white,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  refundModalReason: {
+    fontSize: 14,
+    color: C.text,
+    lineHeight: 20,
+  },
+  refundModalNotesBox: {
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  refundModalNotes: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  refundModalDate: {
+    fontSize: 14,
+    color: C.text,
+  },
+  refundInfoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: C.greenLight,
+    padding: 12,
+    borderRadius: 10,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: C.green,
+  },
+  refundInfoText: {
+    fontSize: 12,
+    color: C.green,
+    marginLeft: 10,
+    flex: 1,
+    lineHeight: 18,
+  },
+  refundModalFooter: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: C.border,
+  },
+  refundModalCloseButton: {
+    backgroundColor: C.primary,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  refundModalCloseButtonText: {
+    color: C.white,
+    fontSize: 15,
     fontWeight: '600',
   },
 });

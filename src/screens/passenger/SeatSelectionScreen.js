@@ -54,19 +54,32 @@ const SeatSelectionScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const dispatch = useDispatch();
-  
+
   const selectedBus = useSelector(selectSelectedBus);
   const selectedSeats = useSelector(selectSelectedSeats);
   const seatMap = useSelector(selectSeatMap);
   const loading = useSelector(selectSeatLoading);
   const error = useSelector(selectSeatError);
-  
+
   const [seatLayout, setSeatLayout] = useState([]);
   const [passengerCount, setPassengerCount] = useState(1);
 
-  const { busId, scheduleId, busName, departure, destination, departureTime, price, passengerCount: pc } = route.params || {};
+  const {
+    busId,
+    scheduleId,
+    busName,
+    departure,
+    destination,
+    departureTime,
+    price,
+    passengerCount: pc,
+  } = route.params || {};
 
   useEffect(() => {
+    // Clear any seats selected from a previous booking session so the
+    // selection always starts fresh for this schedule.
+    dispatch(clearSeatSelection());
+
     if (pc) {
       setPassengerCount(pc);
     } else if (selectedBus) {
@@ -74,12 +87,15 @@ const SeatSelectionScreen = () => {
     }
 
     if (busId && scheduleId) {
-      dispatch(checkSeatAvailability({
-        busId,
-        scheduleId
-      }));
+      dispatch(
+        checkSeatAvailability({
+          busId,
+          scheduleId,
+        }),
+      );
     }
-  }, [selectedBus]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busId, scheduleId]);
 
   useEffect(() => {
     if (seatMap && seatMap.length > 0) {
@@ -87,9 +103,12 @@ const SeatSelectionScreen = () => {
     }
   }, [seatMap]);
 
-  const handleSeatSelect = (seat) => {
+  const handleSeatSelect = seat => {
     if (seat.status === 'booked') {
-      Alert.alert('Kursi Tidak Tersedia', 'Kursi ini sudah dipesan oleh penumpang lain.');
+      Alert.alert(
+        'Kursi Tidak Tersedia',
+        'Kursi ini sudah dipesan oleh penumpang lain.',
+      );
       return;
     }
 
@@ -97,16 +116,18 @@ const SeatSelectionScreen = () => {
     if (!isSelected && selectedSeats.length >= passengerCount) {
       Alert.alert(
         'Maksimum Kursi',
-        `Anda hanya dapat memilih maksimal ${passengerCount} kursi.`
+        `Anda hanya dapat memilih maksimal ${passengerCount} kursi.`,
       );
       return;
     }
 
-    dispatch(toggleSeatSelection({
-      number: seat.number,
-      price: price,
-      type: seat.type,
-    }));
+    dispatch(
+      toggleSeatSelection({
+        number: seat.number,
+        price: price,
+        type: seat.type,
+      }),
+    );
   };
 
   const handleContinue = () => {
@@ -118,7 +139,7 @@ const SeatSelectionScreen = () => {
     if (selectedSeats.length !== passengerCount) {
       Alert.alert(
         'Jumlah Kursi Tidak Sesuai',
-        `Anda harus memilih ${passengerCount} kursi untuk ${passengerCount} penumpang.`
+        `Anda harus memilih ${passengerCount} kursi untuk ${passengerCount} penumpang.`,
       );
       return;
     }
@@ -143,7 +164,7 @@ const SeatSelectionScreen = () => {
   const getSeatTypeColor = (type, status, isSelected) => {
     if (status === 'booked') return C.surfaceAlt;
     if (isSelected) return C.green;
-    
+
     switch (type) {
       case 'premium':
         return C.amber;
@@ -157,11 +178,21 @@ const SeatSelectionScreen = () => {
       <View style={styles.legendRow}>
         <View style={[styles.legendItem, { backgroundColor: C.primary }]} />
         <Text style={styles.legendText}>Tersedia</Text>
-        
-        <View style={[styles.legendItem, { backgroundColor: C.green, marginLeft: 16 }]} />
+
+        <View
+          style={[
+            styles.legendItem,
+            { backgroundColor: C.green, marginLeft: 16 },
+          ]}
+        />
         <Text style={styles.legendText}>Terpilih</Text>
-        
-        <View style={[styles.legendItem, { backgroundColor: C.surfaceAlt, marginLeft: 16 }]} />
+
+        <View
+          style={[
+            styles.legendItem,
+            { backgroundColor: C.surfaceAlt, marginLeft: 16 },
+          ]}
+        />
         <Text style={styles.legendText}>Terisi</Text>
       </View>
     </View>
@@ -187,25 +218,33 @@ const SeatSelectionScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.headerBg} translucent={false} />
-      
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={C.headerBg}
+        translucent={false}
+      />
+
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
           <Ionicons name="arrow-back" size={24} color={C.headerText} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Pilih Kursi</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.clearButton}
           onPress={handleClearSelection}
           disabled={selectedSeats.length === 0}
         >
-          <Text style={[
-            styles.clearButtonText,
-            selectedSeats.length === 0 && { color: 'rgba(255, 255, 255, 0.5)' }
-          ]}>
+          <Text
+            style={[
+              styles.clearButtonText,
+              selectedSeats.length === 0 && {
+                color: 'rgba(255, 255, 255, 0.5)',
+              },
+            ]}
+          >
             Hapus
           </Text>
         </TouchableOpacity>
@@ -218,9 +257,7 @@ const SeatSelectionScreen = () => {
         <Text style={styles.routeText}>
           {departure || 'Jakarta'} → {destination || 'Bandung'}
         </Text>
-        <Text style={styles.dateText}>
-          {departureTime || ''}
-        </Text>
+        <Text style={styles.dateText}>{departureTime || ''}</Text>
       </View>
 
       {selectedSeats.length > 0 && (
@@ -234,47 +271,57 @@ const SeatSelectionScreen = () => {
             ))}
           </View>
           <Text style={styles.totalText}>
-            Total: Rp {selectedSeats.reduce((sum, seat) => sum + (price || 0), 0).toLocaleString('id-ID')}
+            Total: Rp{' '}
+            {selectedSeats
+              .reduce((sum, seat) => sum + (price || 0), 0)
+              .toLocaleString('id-ID')}
           </Text>
         </View>
       )}
 
-      <ScrollView 
+      <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.seatLayoutContainer}>
           {renderDriverSection()}
-          
+
           {seatLayout.map((row, rowIndex) => (
             <View key={rowIndex} style={styles.seatRow}>
-              <Text style={styles.rowLabel}>{row[0]?.number.charAt(0) || ''}</Text>
-              
+              <Text style={styles.rowLabel}>
+                {row[0]?.number.charAt(0) || ''}
+              </Text>
+
               <View style={styles.seatsInRow}>
                 {row.map((seat, seatIndex) => (
                   <TouchableOpacity
                     key={seatIndex}
                     style={[
                       styles.seatButton,
-                      { 
+                      {
                         backgroundColor: getSeatTypeColor(
                           seat.type,
                           seat.status,
-                          selectedSeats.some(s => s.number === seat.number)
+                          selectedSeats.some(s => s.number === seat.number),
                         ),
                         marginRight: seatIndex === 1 ? 16 : 6,
                       },
                       seat.status === 'booked' && styles.seatBooked,
-                      selectedSeats.some(s => s.number === seat.number) && styles.seatSelected,
+                      selectedSeats.some(s => s.number === seat.number) &&
+                        styles.seatSelected,
                     ]}
                     onPress={() => handleSeatSelect(seat)}
                     disabled={seat.status === 'booked' || loading}
                   >
-                    <Text style={[
-                      styles.seatText,
-                      (seat.status === 'booked' || selectedSeats.some(s => s.number === seat.number)) && styles.seatTextWhite
-                    ]}>
+                    <Text
+                      style={[
+                        styles.seatText,
+                        (seat.status === 'booked' ||
+                          selectedSeats.some(s => s.number === seat.number)) &&
+                          styles.seatTextWhite,
+                      ]}
+                    >
                       {seat.number}
                     </Text>
                   </TouchableOpacity>
@@ -294,9 +341,7 @@ const SeatSelectionScreen = () => {
           <Text style={styles.infoText}>
             • Pilih {passengerCount} kursi untuk {passengerCount} penumpang
           </Text>
-          <Text style={styles.infoText}>
-            • Kursi abu-abu sudah dipesan
-          </Text>
+          <Text style={styles.infoText}>• Kursi abu-abu sudah dipesan</Text>
           <Text style={styles.infoText}>
             • Kursi kuning memiliki fasilitas premium
           </Text>
@@ -307,10 +352,13 @@ const SeatSelectionScreen = () => {
         <View style={styles.priceSummary}>
           <Text style={styles.priceLabel}>Total Pembayaran</Text>
           <Text style={styles.priceValue}>
-            Rp {selectedSeats.reduce((sum, seat) => sum + (price || 0), 0).toLocaleString('id-ID')}
+            Rp{' '}
+            {selectedSeats
+              .reduce((sum, seat) => sum + (price || 0), 0)
+              .toLocaleString('id-ID')}
           </Text>
         </View>
-        
+
         <TouchableOpacity
           style={[
             styles.continueButton,

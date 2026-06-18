@@ -38,8 +38,11 @@ export const busService = {
     return response;
   },
 
-  cancelBooking: async bookingId => {
-    const response = await api.delete(`/bookings/${bookingId}`);
+  cancelBooking: async (bookingId, reason = '') => {
+    const response = await api.delete(`/bookings/${bookingId}`, {
+      params: { reason },
+      data: { reason },
+    });
     return response;
   },
 
@@ -50,6 +53,16 @@ export const busService = {
 
   getTickets: async bookingId => {
     const response = await api.get(`/bookings/${bookingId}/tickets`);
+    return response;
+  },
+
+  getRefunds: async () => {
+    const response = await api.get('/refunds');
+    return response;
+  },
+
+  getRefundDetail: async refundId => {
+    const response = await api.get(`/refunds/${refundId}`);
     return response;
   },
 };

@@ -52,7 +52,10 @@ const bookingAPI = {
   fetchBookingDetail: bookingId => api.get(`/bookings/${bookingId}`),
 
   cancelBooking: ({ bookingId, reason }) =>
-    api.delete(`/bookings/${bookingId}`, { data: { reason } }),
+    api.delete(`/bookings/${bookingId}`, {
+      params: { reason },
+      data: { reason },
+    }),
 
   downloadTicket: ticketId => api.get(`/tickets/${ticketId}/qr`),
 

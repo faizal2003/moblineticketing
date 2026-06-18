@@ -279,7 +279,7 @@ const TicketDetailScreen = () => {
 
     try {
       setActionLoading(true);
-      await busService.cancelBooking(bookingId, { reason: cancellationReason });
+      await busService.cancelBooking(bookingId, cancellationReason);
 
       setActionLoading(false);
       setShowCancelModal(false);
@@ -343,36 +343,47 @@ const TicketDetailScreen = () => {
     </View>
   );
 
-  const renderPriceBreakdown = () => (
-    <View style={styles.priceCard}>
-      <Text style={styles.priceTitle}>Rincian Harga</Text>
-      <View style={styles.priceRow}>
-        <Text style={styles.priceLabel}>
-          Tiket ({currentTicket.passengerCount} orang)
-        </Text>
-        <Text style={styles.priceValue}>
-          Rp {(currentTicket.price / 1.1).toLocaleString('id-ID')}
-        </Text>
+  const renderPriceBreakdown = () => {
+    // Backend computes: total = (ticketSubtotal * 1.1) + serviceFee
+    // So reverse it cleanly here to avoid floating point artifacts.
+    const serviceFee = 5000;
+    const total = Number(currentTicket.price) || 0;
+    const ticketSubtotal = Math.max(0, Math.round((total - serviceFee) / 1.1));
+    const tax = Math.max(0, Math.round(ticketSubtotal * 0.1));
+
+    return (
+      <View style={styles.priceCard}>
+        <Text style={styles.priceTitle}>Rincian Harga</Text>
+        <View style={styles.priceRow}>
+          <Text style={styles.priceLabel}>
+            Tiket ({currentTicket.passengerCount} orang)
+          </Text>
+          <Text style={styles.priceValue}>
+            Rp {ticketSubtotal.toLocaleString('id-ID')}
+          </Text>
+        </View>
+        <View style={styles.priceRow}>
+          <Text style={styles.priceLabel}>Pajak (10%)</Text>
+          <Text style={styles.priceValue}>
+            Rp {tax.toLocaleString('id-ID')}
+          </Text>
+        </View>
+        <View style={styles.priceRow}>
+          <Text style={styles.priceLabel}>Biaya Layanan</Text>
+          <Text style={styles.priceValue}>
+            Rp {serviceFee.toLocaleString('id-ID')}
+          </Text>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.totalRow}>
+          <Text style={styles.totalLabel}>Total Pembayaran</Text>
+          <Text style={styles.totalValue}>
+            Rp {total.toLocaleString('id-ID')}
+          </Text>
+        </View>
       </View>
-      <View style={styles.priceRow}>
-        <Text style={styles.priceLabel}>Pajak (10%)</Text>
-        <Text style={styles.priceValue}>
-          Rp {(currentTicket.price * 0.1).toLocaleString('id-ID')}
-        </Text>
-      </View>
-      <View style={styles.priceRow}>
-        <Text style={styles.priceLabel}>Biaya Layanan</Text>
-        <Text style={styles.priceValue}>Rp 0</Text>
-      </View>
-      <View style={styles.divider} />
-      <View style={styles.totalRow}>
-        <Text style={styles.totalLabel}>Total Pembayaran</Text>
-        <Text style={styles.totalValue}>
-          Rp {currentTicket.price.toLocaleString('id-ID')}
-        </Text>
-      </View>
-    </View>
-  );
+    );
+  };
 
   if (loading) {
     return (

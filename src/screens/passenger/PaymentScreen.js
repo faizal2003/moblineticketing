@@ -97,9 +97,15 @@ const PaymentScreen = () => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const bookingData = route.params?.bookingData || {};
-  const totalAmount =
-    route.params?.totalAmount || currentBooking.totalAmount || 0;
-  const bookingId = route.params?.bookingId || currentBooking.id;
+  // Lock the total amount once on mount. currentBooking can be cleared after
+  // a successful payment (clearCurrentBooking), which would otherwise reset
+  // the displayed price to 0.
+  const [totalAmount] = useState(
+    () => route.params?.totalAmount || currentBooking.totalAmount || 0,
+  );
+  const [bookingId] = useState(
+    () => route.params?.bookingId || currentBooking.id,
+  );
 
   const defaultBookingData = {
     busName: currentBooking.busName || 'Sinar Jaya Executive',
