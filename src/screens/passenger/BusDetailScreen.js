@@ -20,6 +20,30 @@ import Entypo from 'react-native-vector-icons/Entypo';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { busService } from '../../services/busService';
 
+// ─── Color Tokens ─────────────────────────────────────────────────────────────
+const C = {
+  primary: '#2563EB',
+  primaryLight: '#EFF6FF',
+  primaryMuted: '#BFDBFE',
+  bg: '#FFFFFF',
+  surface: '#F8FAFC',
+  surfaceAlt: '#F1F5F9',
+  border: '#E2E8F0',
+  text: '#0F172A',
+  textSub: '#64748B',
+  textMuted: '#94A3B8',
+  green: '#10B981',
+  greenLight: '#ECFDF5',
+  amber: '#F59E0B',
+  amberLight: '#FFFBEB',
+  red: '#EF4444',
+  redLight: '#FEF2F2',
+  white: '#FFFFFF',
+  headerBg: '#1E3A5F',
+  headerText: '#FFFFFF',
+  headerSub: '#93C5FD',
+};
+
 const BusDetailScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
@@ -57,7 +81,6 @@ const BusDetailScreen = () => {
       const response = await busService.getBusDetails(busId);
       const data = response.data.data.bus;
       
-      // Find the specific schedule if possible
       const schedule = data.schedules.find(s => s.id === scheduleId) || data.schedules[0];
 
       setBusDetails({
@@ -103,14 +126,18 @@ const BusDetailScreen = () => {
 
   const renderFacilityItem = ({ item }) => (
     <View style={styles.facilityItem}>
-      <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+      <View style={styles.facilityIcon}>
+        <Ionicons name="checkmark-circle" size={16} color={C.green} />
+      </View>
       <Text style={styles.facilityText}>{item}</Text>
     </View>
   );
 
   const renderPolicyItem = ({ item, index }) => (
     <View style={styles.policyItem}>
-      <Text style={styles.policyNumber}>{index + 1}.</Text>
+      <View style={styles.policyNumber}>
+        <Text style={styles.policyNumberText}>{index + 1}</Text>
+      </View>
       <Text style={styles.policyText}>{item}</Text>
     </View>
   );
@@ -118,27 +145,28 @@ const BusDetailScreen = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1E88E5" />
+        <ActivityIndicator size="large" color={C.primary} />
         <Text style={styles.loadingText}>Memuat detail bus...</Text>
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="#1E88E5" barStyle="light-content" />
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.headerBg} translucent={false} />
       
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#FFF" />
+          <Ionicons name="arrow-back" size={24} color={C.headerText} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Detail Bus</Text>
         <View style={styles.headerRight} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Bus Image Hero */}
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         {busDetails.image && (
           <Image 
             source={{ uri: busDetails.image }} 
@@ -147,11 +175,10 @@ const BusDetailScreen = () => {
           />
         )}
 
-        {/* Bus Info Card */}
         <View style={[styles.busInfoCard, busDetails.image && styles.busInfoCardOverlap]}>
           <View style={styles.busHeader}>
             <View style={styles.busIconContainer}>
-              <Ionicons name="bus" size={32} color="#1E88E5" />
+              <Ionicons name="bus" size={30} color={C.primary} />
             </View>
             <View style={styles.busTitleContainer}>
               <Text style={styles.busName}>{busDetails.name}</Text>
@@ -159,45 +186,45 @@ const BusDetailScreen = () => {
             </View>
           </View>
 
-          {/* Route Information */}
           <View style={styles.routeContainer}>
-            <View style={styles.routeItem}>
-              <View style={styles.routeDot} />
-              <View style={styles.routeLine} />
-              <View style={styles.routeDot} />
+            <View style={styles.routeTimeline}>
+              <View style={styles.timelineDot} />
+              <View style={styles.timelineLine} />
+              <View style={[styles.timelineDot, styles.timelineDotDestination]} />
             </View>
             <View style={styles.routeDetails}>
               <View style={styles.routeStop}>
-                <Text style={styles.departureText}>{busDetails.departure}</Text>
-                <Text style={styles.timeText}>{busDetails.departureTime}</Text>
+                <Text style={styles.routeCity}>{busDetails.departure}</Text>
+                <Text style={styles.routeTime}>{busDetails.departureTime}</Text>
               </View>
               <View style={styles.durationContainer}>
-                <Text style={styles.durationText}>{busDetails.duration}</Text>
-                <Ionicons name="time-outline" size={16} color="#666" />
+                <View style={styles.durationBadge}>
+                  <Ionicons name="time-outline" size={14} color={C.primary} />
+                  <Text style={styles.durationText}>{busDetails.duration}</Text>
+                </View>
               </View>
               <View style={styles.routeStop}>
-                <Text style={styles.destinationText}>{busDetails.destination}</Text>
-                <Text style={styles.timeText}>{busDetails.arrivalTime}</Text>
+                <Text style={[styles.routeCity, styles.destinationCity]}>{busDetails.destination}</Text>
+                <Text style={styles.routeTime}>{busDetails.arrivalTime}</Text>
               </View>
             </View>
           </View>
 
-          {/* Seats Information */}
           <View style={styles.seatsInfo}>
             <View style={styles.seatItem}>
-              <Ionicons name="person-outline" size={20} color="#666" />
-              <Text style={styles.seatLabel}>Total Kursi</Text>
+              <Ionicons name="bus-outline" size={18} color={C.textSub} />
+              <Text style={styles.seatLabel}>Total</Text>
               <Text style={styles.seatValue}>{busDetails.totalSeats}</Text>
             </View>
             <View style={styles.seatDivider} />
             <View style={styles.seatItem}>
-              <Ionicons name="checkmark-circle-outline" size={20} color="#4CAF50" />
+              <Ionicons name="checkmark-circle-outline" size={18} color={C.green} />
               <Text style={styles.seatLabel}>Tersedia</Text>
               <Text style={[styles.seatValue, styles.availableSeats]}>{busDetails.availableSeats}</Text>
             </View>
             <View style={styles.seatDivider} />
             <View style={styles.seatItem}>
-              <Ionicons name="close-circle-outline" size={20} color="#F44336" />
+              <Ionicons name="close-circle-outline" size={18} color={C.red} />
               <Text style={styles.seatLabel}>Terisi</Text>
               <Text style={[styles.seatValue, styles.bookedSeats]}>
                 {busDetails.totalSeats - busDetails.availableSeats}
@@ -206,7 +233,6 @@ const BusDetailScreen = () => {
           </View>
         </View>
 
-        {/* Facilities Section */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Fasilitas</Text>
           <FlatList
@@ -219,7 +245,6 @@ const BusDetailScreen = () => {
           />
         </View>
 
-        {/* Price Section */}
         <View style={styles.priceCard}>
           <View>
             <Text style={styles.priceLabel}>Harga per orang</Text>
@@ -227,11 +252,10 @@ const BusDetailScreen = () => {
           </View>
           <TouchableOpacity style={styles.bookButton} onPress={handleBookNow}>
             <Text style={styles.bookButtonText}>Pilih Kursi</Text>
-            <Ionicons name="arrow-forward" size={20} color="#FFF" />
+            <Ionicons name="arrow-forward" size={20} color={C.white} />
           </TouchableOpacity>
         </View>
 
-        {/* Policies Section */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Kebijakan & Ketentuan</Text>
           <FlatList
@@ -242,11 +266,12 @@ const BusDetailScreen = () => {
           />
         </View>
 
-        {/* Contact Support */}
         <View style={styles.contactCard}>
-          <Ionicons name="headset-outline" size={24} color="#1E88E5" />
+          <View style={styles.contactIconWrap}>
+            <Ionicons name="headset-outline" size={22} color={C.primary} />
+          </View>
           <View style={styles.contactInfo}>
-            <Text style={styles.contactTitleButuh}>Butuh Bantuan?</Text>
+            <Text style={styles.contactTitle}>Butuh Bantuan?</Text>
             <Text style={styles.contactText}>Hubungi customer service kami</Text>
           </View>
           <TouchableOpacity style={styles.contactButton}>
@@ -259,144 +284,159 @@ const BusDetailScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: C.headerBg,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: C.surface,
   },
   loadingText: {
     marginTop: 10,
-    color: '#666',
-    fontSize: 16,
+    color: C.textSub,
+    fontSize: 15,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1E88E5',
+    backgroundColor: C.headerBg,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   backButton: {
     padding: 4,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#FFF',
+    fontWeight: '700',
+    color: C.headerText,
   },
   headerRight: {
     width: 32,
   },
+  scrollContent: {
+    paddingBottom: 24,
+  },
+  heroImage: {
+    width: '100%',
+    height: 200,
+    backgroundColor: C.primaryLight,
+  },
   busInfoCard: {
-    backgroundColor: '#FFF',
-    margin: 16,
-    borderRadius: 12,
+    backgroundColor: C.white,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 16,
     padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
   },
   busInfoCardOverlap: {
     marginTop: -20,
   },
-  heroImage: {
-    width: '100%',
-    height: 200,
-    backgroundColor: '#E3F2FD',
-  },
-
   busHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
   },
   busIconContainer: {
-    backgroundColor: '#E3F2FD',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    backgroundColor: C.primaryLight,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    borderWidth: 1,
+    borderColor: C.primaryMuted,
   },
   busTitleContainer: {
     flex: 1,
   },
   busName: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '700',
+    color: C.text,
   },
   busType: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: C.textSub,
     marginTop: 2,
   },
   routeContainer: {
     flexDirection: 'row',
     marginVertical: 16,
   },
-  routeItem: {
+  routeTimeline: {
     alignItems: 'center',
     marginRight: 16,
+    paddingTop: 4,
   },
-  routeDot: {
+  timelineDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#1E88E5',
+    backgroundColor: C.primary,
   },
-  routeLine: {
+  timelineDotDestination: {
+    backgroundColor: C.green,
+  },
+  timelineLine: {
     width: 2,
     height: 40,
-    backgroundColor: '#1E88E5',
+    backgroundColor: C.primary,
     marginVertical: 4,
   },
   routeDetails: {
     flex: 1,
   },
   routeStop: {
-    justifyContent: 'space-between',
     flexDirection: 'row',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  departureText: {
-    fontSize: 16,
+  routeCity: {
+    fontSize: 15,
     fontWeight: '600',
-    color: '#333',
+    color: C.text,
   },
-  destinationText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+  destinationCity: {
+    color: C.green,
   },
-  timeText: {
-    fontSize: 14,
-    color: '#666',
+  routeTime: {
+    fontSize: 13,
+    color: C.textSub,
   },
   durationContainer: {
+    alignItems: 'center',
+    marginVertical: 6,
+  },
+  durationBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 8,
+    backgroundColor: C.primaryLight,
+    paddingHorizontal: 12,
+    paddingVertical: 3,
+    borderRadius: 12,
+    gap: 6,
   },
   durationText: {
-    fontSize: 14,
-    color: '#666',
-    marginRight: 8,
+    fontSize: 12,
+    color: C.primary,
+    fontWeight: '500',
   },
   seatsInfo: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
+    backgroundColor: C.surface,
+    borderRadius: 10,
     padding: 12,
     marginTop: 8,
   },
@@ -405,153 +445,179 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   seatLabel: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 11,
+    color: C.textMuted,
     marginTop: 4,
+    fontWeight: '500',
   },
   seatValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 16,
+    fontWeight: '700',
+    color: C.text,
     marginTop: 2,
   },
   availableSeats: {
-    color: '#4CAF50',
+    color: C.green,
   },
   bookedSeats: {
-    color: '#F44336',
+    color: C.red,
   },
   seatDivider: {
     width: 1,
-    height: '100%',
-    backgroundColor: '#E0E0E0',
+    height: '80%',
+    backgroundColor: C.border,
   },
   sectionContainer: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 12,
+    marginTop: 16,
+    borderRadius: 16,
     padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowRadius: 4,
     elevation: 2,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: C.text,
     marginBottom: 12,
   },
   facilitiesList: {
-    paddingBottom: 8,
+    paddingBottom: 4,
   },
   facilityItem: {
     flexDirection: 'row',
     alignItems: 'center',
     width: '50%',
-    marginBottom: 12,
+    marginBottom: 10,
+  },
+  facilityIcon: {
+    marginRight: 8,
   },
   facilityText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#555',
+    fontSize: 13,
+    color: C.textSub,
   },
   priceCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 12,
+    marginTop: 16,
+    borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
   },
   priceLabel: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: C.textSub,
   },
   priceValue: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#1E88E5',
-    marginTop: 4,
+    color: C.primary,
+    marginTop: 2,
   },
   bookButton: {
-    backgroundColor: '#1E88E5',
+    backgroundColor: C.primary,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 10,
+    shadowColor: C.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   bookButtonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
+    color: C.white,
+    fontSize: 15,
+    fontWeight: '700',
     marginRight: 8,
   },
   policyItem: {
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: 10,
     alignItems: 'flex-start',
   },
   policyNumber: {
-    fontSize: 14,
-    color: '#666',
-    marginRight: 8,
-    minWidth: 20,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: C.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+    marginTop: 1,
+  },
+  policyNumberText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: C.primary,
   },
   policyText: {
-    fontSize: 14,
-    color: '#555',
+    fontSize: 13,
+    color: C.textSub,
     flex: 1,
     lineHeight: 20,
   },
   contactCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     marginHorizontal: 16,
-    marginBottom: 24,
-    borderRadius: 12,
+    marginTop: 16,
+    marginBottom: 8,
+    borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowRadius: 4,
     elevation: 2,
+  },
+  contactIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: C.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   contactInfo: {
     flex: 1,
-    marginLeft: 12,
   },
-  contactTitleButuh: {
+  contactTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: C.text,
   },
   contactText: {
     fontSize: 12,
-    color: '#666',
-    marginTop: 2,
+    color: C.textSub,
+    marginTop: 1,
   },
   contactButton: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: C.primaryLight,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 6,
+    borderRadius: 8,
   },
   contactButtonText: {
-    color: '#1E88E5',
-    fontSize: 14,
-    fontWeight: '500',
+    color: C.primary,
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
 

@@ -19,6 +19,30 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { conductorService } from '../../services/conductorService';
 
+// ─── Color Tokens ─────────────────────────────────────────────────────────────
+const C = {
+  primary: '#2563EB',
+  primaryLight: '#EFF6FF',
+  primaryMuted: '#BFDBFE',
+  bg: '#FFFFFF',
+  surface: '#F8FAFC',
+  surfaceAlt: '#F1F5F9',
+  border: '#E2E8F0',
+  text: '#0F172A',
+  textSub: '#64748B',
+  textMuted: '#94A3B8',
+  green: '#10B981',
+  greenLight: '#ECFDF5',
+  amber: '#F59E0B',
+  amberLight: '#FFFBEB',
+  red: '#EF4444',
+  redLight: '#FEF2F2',
+  white: '#FFFFFF',
+  headerBg: '#1E3A5F',
+  headerText: '#FFFFFF',
+  headerSub: '#93C5FD',
+};
+
 const { height } = Dimensions.get('window');
 
 const PassengerListScreen = () => {
@@ -41,10 +65,10 @@ const PassengerListScreen = () => {
   });
 
   const filterOptions = [
-    { id: 'all', label: 'Semua', icon: 'people', color: '#1E88E5' },
-    { id: 'boarded', label: 'Sudah Naik', icon: 'checkmark-circle', color: '#4CAF50' },
-    { id: 'pending', label: 'Belum Naik', icon: 'time', color: '#FF9800' },
-    { id: 'missed', label: 'No Show', icon: 'close-circle', color: '#F44336' },
+    { id: 'all', label: 'Semua', color: C.primary },
+    { id: 'boarded', label: 'Sudah Naik', color: C.green },
+    { id: 'pending', label: 'Belum Naik', color: C.amber },
+    { id: 'missed', label: 'No Show', color: C.red },
   ];
 
   useFocusEffect(
@@ -71,7 +95,6 @@ const PassengerListScreen = () => {
       const passengerList = data.passengers || [];
       setPassengers(passengerList);
       
-      // Calculate stats
       const total = passengerList.length;
       const boarded = passengerList.filter(p => p.boarding_status === 'boarded').length;
       const pending = passengerList.filter(p => p.boarding_status === 'pending').length;
@@ -108,9 +131,7 @@ const PassengerListScreen = () => {
       filtered = filtered.filter(p => p.boarding_status === selectedFilter);
     }
     
-    // Sort by seat number
     filtered.sort((a, b) => a.seat_number.localeCompare(b.seat_number, undefined, {numeric: true}));
-    
     setFilteredPassengers(filtered);
   };
 
@@ -127,7 +148,7 @@ const PassengerListScreen = () => {
           onPress: async () => {
             try {
               await conductorService.updateTicketStatus(passenger.ticket_id, newStatus);
-              loadPassengers(); // Refresh list
+              loadPassengers();
             } catch (error) {
               Alert.alert('Error', 'Gagal update status penumpang');
             }
@@ -139,10 +160,10 @@ const PassengerListScreen = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'boarded': return '#4CAF50';
-      case 'pending': return '#FF9800';
-      case 'missed': return '#F44336';
-      default: return '#757575';
+      case 'boarded': return C.green;
+      case 'pending': return C.amber;
+      case 'missed': return C.red;
+      default: return C.textMuted;
     }
   };
 
@@ -152,6 +173,15 @@ const PassengerListScreen = () => {
       case 'pending': return 'Belum Naik';
       case 'missed': return 'No Show';
       default: return status;
+    }
+  };
+
+  const getStatusBgColor = (status) => {
+    switch (status) {
+      case 'boarded': return C.greenLight;
+      case 'pending': return C.amberLight;
+      case 'missed': return C.redLight;
+      default: return C.surface;
     }
   };
 
@@ -165,14 +195,16 @@ const PassengerListScreen = () => {
           <Text style={styles.passengerName}>{item.name}</Text>
           <Text style={styles.ticketCode}>{item.ticket_code}</Text>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.boarding_status) }]}>
-          <Text style={styles.statusText}>{getStatusText(item.boarding_status)}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: getStatusBgColor(item.boarding_status) }]}>
+          <Text style={[styles.statusText, { color: getStatusColor(item.boarding_status) }]}>
+            {getStatusText(item.boarding_status)}
+          </Text>
         </View>
       </View>
       
       <View style={styles.cardFooter}>
         <View style={styles.contactInfo}>
-          <Ionicons name="call-outline" size={14} color="#666" />
+          <Ionicons name="call-outline" size={14} color={C.textSub} />
           <Text style={styles.phoneText}>{item.phone || '-'}</Text>
         </View>
         
@@ -183,14 +215,14 @@ const PassengerListScreen = () => {
                 style={[styles.actionButton, styles.boardButton]}
                 onPress={() => handleUpdateStatus(item, 'boarded')}
               >
-                <Ionicons name="bus" size={16} color="#FFF" />
+                <Ionicons name="bus" size={14} color={C.white} />
                 <Text style={styles.actionButtonText}>Naik</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.actionButton, styles.noShowButton]}
                 onPress={() => handleUpdateStatus(item, 'missed')}
               >
-                <Ionicons name="close-circle" size={16} color="#FFF" />
+                <Ionicons name="close-circle" size={14} color={C.white} />
                 <Text style={styles.actionButtonText}>No Show</Text>
               </TouchableOpacity>
             </>
@@ -200,8 +232,8 @@ const PassengerListScreen = () => {
               style={[styles.actionButton, styles.resetButton]}
               onPress={() => handleUpdateStatus(item, 'pending')}
             >
-              <Ionicons name="refresh" size={16} color="#666" />
-              <Text style={[styles.actionButtonText, { color: '#666' }]}>Reset</Text>
+              <Ionicons name="refresh" size={14} color={C.textSub} />
+              <Text style={[styles.actionButtonText, { color: C.textSub }]}>Reset</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -212,19 +244,19 @@ const PassengerListScreen = () => {
   if (loading && !refreshing) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1E88E5" />
+        <ActivityIndicator size="large" color={C.primary} />
+        <Text style={styles.loadingText}>Memuat data penumpang...</Text>
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="#1E88E5" barStyle="light-content" />
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.headerBg} translucent={false} />
       
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#FFF" />
+          <Ionicons name="arrow-back" size={24} color={C.headerText} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle}>Daftar Penumpang</Text>
@@ -234,38 +266,39 @@ const PassengerListScreen = () => {
           onPress={() => navigation.navigate('ScanTicket', { scheduleId })}
           style={styles.scanHeaderButton}
         >
-          <Ionicons name="qr-code-scanner" size={24} color="#FFF" />
+          <Ionicons name="qr-code-scanner" size={24} color={C.headerText} />
         </TouchableOpacity>
       </View>
 
-      {/* Stats Overview */}
       <View style={styles.statsContainer}>
         <View style={styles.statBox}>
           <Text style={styles.statNumber}>{stats.total}</Text>
           <Text style={styles.statLabel}>Total</Text>
         </View>
+        <View style={styles.statDivider} />
         <View style={styles.statBox}>
-          <Text style={[styles.statNumber, { color: '#4CAF50' }]}>{stats.boarded}</Text>
+          <Text style={[styles.statNumber, { color: C.green }]}>{stats.boarded}</Text>
           <Text style={styles.statLabel}>Naik</Text>
         </View>
+        <View style={styles.statDivider} />
         <View style={styles.statBox}>
-          <Text style={[styles.statNumber, { color: '#FF9800' }]}>{stats.pending}</Text>
+          <Text style={[styles.statNumber, { color: C.amber }]}>{stats.pending}</Text>
           <Text style={styles.statLabel}>Pending</Text>
         </View>
+        <View style={styles.statDivider} />
         <View style={styles.statBox}>
-          <Text style={[styles.statNumber, { color: '#F44336' }]}>{stats.missed}</Text>
+          <Text style={[styles.statNumber, { color: C.red }]}>{stats.missed}</Text>
           <Text style={styles.statLabel}>No Show</Text>
         </View>
       </View>
 
-      {/* Search and Filters */}
       <View style={styles.filterSection}>
         <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#999" />
+          <Ionicons name="search" size={18} color={C.textMuted} />
           <TextInput
             style={styles.searchInput}
             placeholder="Cari nama atau nomor kursi..."
-            placeholderTextColor="#999"
+            placeholderTextColor={C.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -283,7 +316,7 @@ const PassengerListScreen = () => {
             >
               <Text style={[
                 styles.filterText,
-                selectedFilter === option.id && { color: '#FFF' }
+                selectedFilter === option.id && { color: C.white }
               ]}>{option.label}</Text>
             </TouchableOpacity>
           ))}
@@ -296,12 +329,20 @@ const PassengerListScreen = () => {
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            colors={[C.primary]}
+            tintColor={C.primary}
+          />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="people-outline" size={64} color="#CCC" />
+            <View style={styles.emptyIconWrap}>
+              <Ionicons name="people-outline" size={56} color={C.textMuted} />
+            </View>
             <Text style={styles.emptyText}>Tidak ada penumpang ditemukan</Text>
+            <Text style={styles.emptySubtext}>Coba ubah filter atau kata kunci pencarian</Text>
           </View>
         }
       />
@@ -310,85 +351,102 @@ const PassengerListScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: C.headerBg,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: C.surface,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: C.textSub,
+    fontSize: 15,
   },
   header: {
-    backgroundColor: '#1E88E5',
+    backgroundColor: C.headerBg,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   backButton: {
     marginRight: 12,
+    padding: 4,
   },
   headerTitleContainer: {
     flex: 1,
   },
   headerTitle: {
-    color: '#FFF',
+    color: C.headerText,
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   headerSubtitle: {
-    color: '#E3F2FD',
+    color: C.headerSub,
     fontSize: 12,
+    marginTop: 2,
   },
   scanHeaderButton: {
     padding: 4,
   },
   statsContainer: {
     flexDirection: 'row',
-    backgroundColor: '#FFF',
-    paddingVertical: 15,
-    elevation: 2,
+    backgroundColor: C.white,
+    paddingVertical: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   statBox: {
     flex: 1,
     alignItems: 'center',
-    borderRightWidth: 1,
-    borderRightColor: '#EEE',
+  },
+  statDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: C.border,
+    alignSelf: 'center',
   },
   statNumber: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: C.text,
   },
   statLabel: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 11,
+    color: C.textSub,
     marginTop: 2,
+    fontWeight: '500',
   },
   filterSection: {
-    backgroundColor: '#FFF',
-    marginTop: 10,
-    paddingVertical: 10,
+    backgroundColor: C.white,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1F3F4',
+    backgroundColor: C.surface,
     marginHorizontal: 16,
     paddingHorizontal: 12,
-    borderRadius: 8,
-    height: 40,
+    borderRadius: 10,
+    height: 42,
+    borderWidth: 1,
+    borderColor: C.border,
   },
   searchInput: {
     flex: 1,
     marginLeft: 8,
     fontSize: 14,
-    color: '#333',
+    color: C.text,
+    paddingVertical: 0,
   },
   filterScroll: {
     paddingLeft: 16,
@@ -398,27 +456,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: '#F1F3F4',
+    backgroundColor: C.surface,
     marginRight: 8,
+    borderWidth: 1,
+    borderColor: C.border,
   },
   filterText: {
     fontSize: 12,
-    color: '#666',
+    color: C.textSub,
+    fontWeight: '500',
   },
   listContent: {
     padding: 16,
     paddingBottom: 20,
+    backgroundColor: C.surface,
+    flexGrow: 1,
   },
   passengerCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
+    backgroundColor: C.white,
+    borderRadius: 14,
     padding: 16,
     marginBottom: 12,
-    elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -426,41 +489,42 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   seatBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E3F2FD',
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: C.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    borderWidth: 1,
+    borderColor: C.primaryMuted,
   },
   seatText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1E88E5',
+    fontSize: 15,
+    fontWeight: '700',
+    color: C.primary,
   },
   passengerInfo: {
     flex: 1,
   },
   passengerName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 15,
+    fontWeight: '600',
+    color: C.text,
   },
   ticketCode: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 11,
+    color: C.textSub,
     marginTop: 2,
   },
   statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 10,
   },
   statusText: {
-    color: '#FFF',
     fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   cardFooter: {
     flexDirection: 'row',
@@ -468,7 +532,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F1F3F4',
+    borderTopColor: C.surfaceAlt,
   },
   contactInfo: {
     flexDirection: 'row',
@@ -476,7 +540,7 @@ const styles = StyleSheet.create({
   },
   phoneText: {
     fontSize: 12,
-    color: '#666',
+    color: C.textSub,
     marginLeft: 4,
   },
   actionButtons: {
@@ -487,33 +551,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 6,
+    borderRadius: 8,
     marginLeft: 8,
   },
   boardButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: C.green,
   },
   noShowButton: {
-    backgroundColor: '#F44336',
+    backgroundColor: C.red,
   },
   resetButton: {
-    backgroundColor: '#F1F3F4',
+    backgroundColor: C.surface,
+    borderWidth: 1,
+    borderColor: C.border,
   },
   actionButtonText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: 'bold',
+    color: C.white,
+    fontSize: 11,
+    fontWeight: '600',
     marginLeft: 4,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 60,
+    paddingTop: 60,
+  },
+  emptyIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: C.surfaceAlt,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   emptyText: {
-    marginTop: 10,
-    color: '#999',
-    fontSize: 16,
+    fontSize: 17,
+    fontWeight: '600',
+    color: C.text,
+    marginTop: 16,
+  },
+  emptySubtext: {
+    fontSize: 13,
+    color: C.textSub,
+    marginTop: 4,
   },
 });
 

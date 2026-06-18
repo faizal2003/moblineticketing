@@ -32,6 +32,30 @@ import QRCode from 'react-native-qrcode-svg';
 import { CameraRoll } from '@react-native-camera-roll/camera-roll';
 import { busService } from '../../services/busService';
 
+// ─── Color Tokens ─────────────────────────────────────────────────────────────
+const C = {
+  primary: '#2563EB',
+  primaryLight: '#EFF6FF',
+  primaryMuted: '#BFDBFE',
+  bg: '#FFFFFF',
+  surface: '#F8FAFC',
+  surfaceAlt: '#F1F5F9',
+  border: '#E2E8F0',
+  text: '#0F172A',
+  textSub: '#64748B',
+  textMuted: '#94A3B8',
+  green: '#10B981',
+  greenLight: '#ECFDF5',
+  amber: '#F59E0B',
+  amberLight: '#FFFBEB',
+  red: '#EF4444',
+  redLight: '#FEF2F2',
+  white: '#FFFFFF',
+  headerBg: '#1E3A5F',
+  headerText: '#FFFFFF',
+  headerSub: '#93C5FD',
+};
+
 const { width, height } = Dimensions.get('window');
 
 const TicketDetailScreen = () => {
@@ -63,7 +87,6 @@ const TicketDetailScreen = () => {
       const response = await busService.getBookingDetail(bookingId);
       const data = response.data.data;
       
-      // Transform backend data to currentTicket format
       setCurrentTicket({
         id: data.ticket?.ticket_code || 'N/A',
         bookingId: data.booking_code,
@@ -112,54 +135,37 @@ const TicketDetailScreen = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'confirmed':
-        return '#4CAF50';
-      case 'pending':
-        return '#FF9800';
-      case 'cancelled':
-        return '#F44336';
-      case 'completed':
-        return '#2196F3';
-      default:
-        return '#757575';
+      case 'confirmed': return C.green;
+      case 'pending': return C.amber;
+      case 'cancelled': return C.red;
+      case 'completed': return C.primary;
+      default: return C.textMuted;
     }
   };
 
   const getStatusText = (status) => {
     switch (status) {
-      case 'confirmed':
-        return 'Terkonfirmasi';
-      case 'pending':
-        return 'Menunggu Pembayaran';
-      case 'cancelled':
-        return 'Dibatalkan';
-      case 'completed':
-        return 'Perjalanan Selesai';
-      default:
-        return status;
+      case 'confirmed': return 'Terkonfirmasi';
+      case 'pending': return 'Menunggu Pembayaran';
+      case 'cancelled': return 'Dibatalkan';
+      case 'completed': return 'Perjalanan Selesai';
+      default: return status;
     }
   };
 
   const getPaymentStatusText = (paymentStatus) => {
     switch (paymentStatus) {
-      case 'paid':
-        return 'Lunas';
-      case 'pending':
-        return 'Menunggu Pembayaran';
-      case 'refunded':
-        return 'Dikembalikan';
-      case 'failed':
-        return 'Gagal';
-      default:
-        return paymentStatus;
+      case 'paid': return 'Lunas';
+      case 'pending': return 'Menunggu Pembayaran';
+      case 'refunded': return 'Dikembalikan';
+      case 'failed': return 'Gagal';
+      default: return paymentStatus;
     }
   };
 
   const handleShare = async () => {
     try {
       setShowShareOptions(false);
-      
-      // Capture the printable ticket
       setActionLoading(true);
       if (!printableRef.current) return;
       
@@ -189,8 +195,6 @@ const TicketDetailScreen = () => {
       if (!printableRef.current) return;
       
       const uri = await printableRef.current.capture();
-      
-      // Save to gallery using CameraRoll
       await CameraRoll.save(uri, { type: 'photo' });
       Alert.alert('Berhasil', 'Tiket berhasil disimpan ke galeri');
     } catch (error) {
@@ -209,7 +213,7 @@ const TicketDetailScreen = () => {
 
     try {
       setActionLoading(true);
-      await dispatch(cancelBooking(bookingId)).unwrap();
+      await busService.cancelBooking(bookingId, { reason: cancellationReason });
       
       setActionLoading(false);
       setShowCancelModal(false);
@@ -225,7 +229,7 @@ const TicketDetailScreen = () => {
       );
     } catch (error) {
       setActionLoading(false);
-      Alert.alert('Error', error || 'Gagal membatalkan tiket');
+      Alert.alert('Error', error?.message || 'Gagal membatalkan tiket');
     }
   };
 
@@ -252,17 +256,17 @@ const TicketDetailScreen = () => {
       </View>
       <View style={styles.passengerDetails}>
         <View style={styles.detailRow}>
-          <Ionicons name="card-outline" size={16} color="#666" />
+          <Ionicons name="card-outline" size={14} color={C.textSub} />
           <Text style={styles.detailLabel}>ID:</Text>
           <Text style={styles.detailValue}>{passenger.identityNumber}</Text>
         </View>
         <View style={styles.detailRow}>
-          <Ionicons name="call-outline" size={16} color="#666" />
+          <Ionicons name="call-outline" size={14} color={C.textSub} />
           <Text style={styles.detailLabel}>Telepon:</Text>
           <Text style={styles.detailValue}>{passenger.phone}</Text>
         </View>
         <View style={styles.detailRow}>
-          <Ionicons name="mail-outline" size={16} color="#666" />
+          <Ionicons name="mail-outline" size={14} color={C.textSub} />
           <Text style={styles.detailLabel}>Email:</Text>
           <Text style={styles.detailValue}>{passenger.email}</Text>
         </View>
@@ -272,7 +276,7 @@ const TicketDetailScreen = () => {
 
   const renderFacility = (facility, index) => (
     <View key={index} style={styles.facilityItem}>
-      <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
+      <Ionicons name="checkmark-circle" size={14} color={C.green} />
       <Text style={styles.facilityText}>{facility}</Text>
     </View>
   );
@@ -311,9 +315,9 @@ const TicketDetailScreen = () => {
           style={{ position: 'absolute', top: 50, left: 20, zIndex: 10 }}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color="#1E88E5" />
+          <Ionicons name="arrow-back" size={24} color={C.primary} />
         </TouchableOpacity>
-        <ActivityIndicator size="large" color="#1E88E5" />
+        <ActivityIndicator size="large" color={C.primary} />
         <Text style={styles.loadingText}>Memuat detail tiket...</Text>
       </View>
     );
@@ -334,10 +338,389 @@ const TicketDetailScreen = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="#1E88E5" barStyle="light-content" />
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.headerBg} translucent={false} />
       
-      {/* Hidden Printable Ticket (Hidden from view, used for capture) */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={C.headerText} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Detail Tiket</Text>
+        <TouchableOpacity 
+          style={styles.shareButton}
+          onPress={() => setShowShareOptions(true)}
+        >
+          <Ionicons name="share-outline" size={24} color={C.headerText} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 0.9 }}>
+          <View style={styles.ticketContainer}>
+            <View style={styles.ticketHeader}>
+              <View style={styles.ticketIdContainer}>
+                <Text style={styles.ticketId}>{currentTicket.id}</Text>
+                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(currentTicket.status) }]}>
+                  <Text style={styles.statusText}>{getStatusText(currentTicket.status)}</Text>
+                </View>
+              </View>
+              <Text style={styles.bookingId}>Booking ID: {currentTicket.bookingId}</Text>
+            </View>
+
+            <View style={styles.busInfoCard}>
+              <View style={styles.busHeader}>
+                <View style={styles.busIconContainer}>
+                  <Ionicons name="bus" size={28} color={C.primary} />
+                </View>
+                <View style={styles.busInfo}>
+                  <Text style={styles.busName}>{currentTicket.busName}</Text>
+                  <Text style={styles.busNumber}>{currentTicket.busNumber} • {currentTicket.bookingClass}</Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.routeCard}>
+              <View style={styles.routeHeader}>
+                <Text style={styles.routeTitle}>Rute Perjalanan</Text>
+                <TouchableOpacity onPress={handleOpenMaps} style={styles.mapButton}>
+                  <Ionicons name="map-outline" size={18} color={C.primary} />
+                  <Text style={styles.mapButtonText}>Peta</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.routeDetails}>
+                <View style={styles.routeStop}>
+                  <View style={styles.routeDot} />
+                  <View style={styles.routeInfo}>
+                    <Text style={styles.routeCity}>{currentTicket.departure}</Text>
+                    <Text style={styles.routePoint}>{currentTicket.boardingPoint}</Text>
+                    <Text style={styles.routeTime}>{formatTime(currentTicket.departureTime)}</Text>
+                  </View>
+                  <Text style={styles.routeDate}>
+                    {format(currentTicket.departureDate, 'd MMM yyyy')}
+                  </Text>
+                </View>
+                
+                <View style={styles.routeDuration}>
+                  <View style={styles.durationLine} />
+                  <View style={styles.durationInfo}>
+                    <Ionicons name="time-outline" size={14} color={C.textSub} />
+                    <Text style={styles.durationText}>
+                      {currentTicket.departureTime && currentTicket.arrivalTime 
+                        ? `${Math.abs(new Date(`2000-01-01 ${currentTicket.arrivalTime}`) - new Date(`2000-01-01 ${currentTicket.departureTime}`)) / (1000 * 60 * 60)} jam`
+                        : '4 jam'
+                      }
+                    </Text>
+                  </View>
+                </View>
+                
+                <View style={styles.routeStop}>
+                  <View style={[styles.routeDot, styles.destinationDot]} />
+                  <View style={styles.routeInfo}>
+                    <Text style={styles.routeCity}>{currentTicket.destination}</Text>
+                    <Text style={styles.routePoint}>{currentTicket.dropPoint}</Text>
+                    <Text style={styles.routeTime}>{formatTime(currentTicket.arrivalTime)}</Text>
+                  </View>
+                  <Text style={styles.routeDate}>
+                    {format(currentTicket.departureDate, 'd MMM yyyy')}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Informasi Penumpang</Text>
+              {currentTicket.passengerInfo?.map(renderPassengerInfo) || (
+                <Text style={styles.noDataText}>Tidak ada data penumpang</Text>
+              )}
+            </View>
+
+            <View style={styles.seatCard}>
+              <Text style={styles.sectionTitle}>Kursi Terpilih</Text>
+              <View style={styles.seatsContainer}>
+                {currentTicket.seats.map((seat, index) => (
+                  <View key={index} style={styles.seatBadge}>
+                    <Text style={styles.seatText}>{seat}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Fasilitas</Text>
+              <View style={styles.facilitiesContainer}>
+                {currentTicket.facilities.map(renderFacility)}
+              </View>
+            </View>
+
+            {renderPriceBreakdown()}
+
+            <View style={styles.qrCard}>
+              <Text style={styles.sectionTitle}>Kode Tiket</Text>
+              <TouchableOpacity 
+                style={styles.qrContainer}
+                onPress={() => setShowQRModal(true)}
+              >
+                <View style={styles.qrPlaceholder}>
+                  {currentTicket.qrCode && currentTicket.qrCode !== '-' ? (
+                    <QRCode
+                      value={JSON.stringify({
+                        ticket_code: currentTicket.id,
+                        booking_id: currentTicket.bookingId,
+                      })}
+                      size={120}
+                      color={C.text}
+                      backgroundColor={C.surface}
+                    />
+                  ) : (
+                    <Ionicons name="qr-code-outline" size={64} color={C.primary} />
+                  )}
+                  <Text style={styles.qrText}>Scan untuk boarding</Text>
+                  <Text style={styles.qrCode}>{currentTicket.id}</Text>
+                </View>
+              </TouchableOpacity>
+              <Text style={styles.qrInstruction}>
+                Tunjukkan QR code ini saat boarding
+              </Text>
+            </View>
+
+            <View style={styles.notesCard}>
+              <View style={styles.notesHeader}>
+                <Ionicons name="information-circle" size={18} color={C.amber} />
+                <Text style={styles.notesTitle}>Catatan Penting</Text>
+              </View>
+              <View style={styles.notesContent}>
+                <Text style={styles.noteText}>• Hadir di boarding point 30 menit sebelum keberangkatan</Text>
+                <Text style={styles.noteText}>• Bawa bukti identitas asli</Text>
+                <Text style={styles.noteText}>• Tiket tidak dapat diubah atau dibatalkan 2 jam sebelum keberangkatan</Text>
+                <Text style={styles.noteText}>• Dilarang membawa barang berbahaya</Text>
+              </View>
+            </View>
+          </View>
+        </ViewShot>
+
+        <View style={styles.actionContainer}>
+          {currentTicket.status === 'confirmed' && (
+            <>
+              <TouchableOpacity 
+                style={styles.primaryButton}
+                onPress={handleDownload}
+                disabled={actionLoading}
+              >
+                {actionLoading ? (
+                  <ActivityIndicator color={C.white} />
+                ) : (
+                  <>
+                    <Ionicons name="download-outline" size={18} color={C.white} />
+                    <Text style={styles.primaryButtonText}>Download Tiket</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.secondaryButton}
+                onPress={() => setShowCancelModal(true)}
+                disabled={actionLoading}
+              >
+                <Ionicons name="close-circle-outline" size={18} color={C.red} />
+                <Text style={styles.secondaryButtonText}>Batalkan Tiket</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {currentTicket.status === 'pending' && (
+            <TouchableOpacity 
+              style={styles.payButton}
+              onPress={() => navigation.navigate('Payment', { bookingId: currentTicket.bookingId })}
+              disabled={actionLoading}
+            >
+              <Ionicons name="card-outline" size={18} color={C.white} />
+              <Text style={styles.payButtonText}>Bayar Sekarang</Text>
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity 
+            style={styles.supportButton}
+            onPress={handleContactSupport}
+          >
+            <Ionicons name="headset-outline" size={18} color={C.primary} />
+            <Text style={styles.supportButtonText}>Hubungi Support</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.supportButton, { marginTop: 10, borderColor: C.primary }]}
+            onPress={() => navigation.reset({
+              index: 0,
+              routes: [{ name: 'PassengerHome' }],
+            })}
+          >
+            <Ionicons name="home-outline" size={18} color={C.primary} />
+            <Text style={styles.supportButtonText}>Kembali ke Beranda</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+
+      <Modal
+        visible={showShareOptions}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowShareOptions(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Bagikan Tiket</Text>
+              <TouchableOpacity onPress={() => setShowShareOptions(false)}>
+                <Ionicons name="close" size={24} color={C.textSub} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.modalContent}>
+              <TouchableOpacity 
+                style={styles.modalOption}
+                onPress={handleShare}
+              >
+                <Ionicons name="share-social-outline" size={24} color={C.primary} />
+                <Text style={styles.modalOptionText}>Bagikan via Media Sosial</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.modalOption}
+                onPress={handleDownload}
+              >
+                <Ionicons name="download-outline" size={24} color={C.green} />
+                <Text style={styles.modalOptionText}>Download ke Galeri</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.modalOption, styles.cancelOption]}
+                onPress={() => setShowShareOptions(false)}
+              >
+                <Text style={styles.cancelOptionText}>Batal</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showCancelModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowCancelModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.cancelModalContainer}>
+            <View style={styles.cancelModalHeader}>
+              <Text style={styles.cancelModalTitle}>Batalkan Tiket</Text>
+              <Text style={styles.cancelModalSubtitle}>
+                Apakah Anda yakin ingin membatalkan tiket ini?
+              </Text>
+            </View>
+            
+            <View style={styles.cancelModalContent}>
+              <Text style={styles.inputLabel}>Alasan Pembatalan</Text>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Masukkan alasan pembatalan"
+                  placeholderTextColor={C.textMuted}
+                  value={cancellationReason}
+                  onChangeText={setCancellationReason}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+              </View>
+              
+              <Text style={styles.refundInfo}>
+                Dana akan dikembalikan dalam 3-5 hari kerja ke metode pembayaran awal.
+              </Text>
+              
+              <View style={styles.cancelModalActions}>
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.cancelModalButton]}
+                  onPress={() => setShowCancelModal(false)}
+                >
+                  <Text style={styles.cancelModalButtonText}>Batal</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.confirmCancelButton]}
+                  onPress={handleCancelTicket}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? (
+                    <ActivityIndicator color={C.white} />
+                  ) : (
+                    <Text style={styles.confirmCancelButtonText}>Ya, Batalkan</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showQRModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowQRModal(false)}
+      >
+        <View style={styles.qrModalOverlay}>
+          <View style={styles.qrModalContainer}>
+            <View style={styles.qrModalHeader}>
+              <Text style={styles.qrModalTitle}>Kode Boarding</Text>
+              <TouchableOpacity onPress={() => setShowQRModal(false)}>
+                <Ionicons name="close" size={24} color={C.white} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.qrModalContent}>
+              <View style={styles.qrCodeDisplay}>
+                {currentTicket.qrCode && currentTicket.qrCode !== '-' ? (
+                  <QRCode
+                    value={JSON.stringify({
+                      ticket_code: currentTicket.id,
+                      booking_id: currentTicket.bookingId,
+                      passenger_name: currentTicket.passengerInfo?.[0]?.name,
+                      timestamp: Math.floor(Date.now() / 1000),
+                    })}
+                    size={200}
+                    color={C.text}
+                    backgroundColor={C.white}
+                  />
+                ) : (
+                  <Ionicons name="qr-code" size={180} color={C.text} />
+                )}
+                <Text style={styles.qrCodeText}>{currentTicket.id}</Text>
+              </View>
+              <Text style={styles.qrModalInstruction}>
+                Tunjukkan kode ini kepada petugas boarding
+              </Text>
+              <View style={styles.qrModalInfo}>
+                <View style={styles.qrInfoRow}>
+                  <Text style={styles.qrInfoLabel}>Bus:</Text>
+                  <Text style={styles.qrInfoValue}>{currentTicket.busName}</Text>
+                </View>
+                <View style={styles.qrInfoRow}>
+                  <Text style={styles.qrInfoLabel}>Tanggal:</Text>
+                  <Text style={styles.qrInfoValue}>
+                    {format(currentTicket.departureDate, 'd MMM yyyy')}
+                  </Text>
+                </View>
+                <View style={styles.qrInfoRow}>
+                  <Text style={styles.qrInfoLabel}>Waktu:</Text>
+                  <Text style={styles.qrInfoValue}>{currentTicket.departureTime}</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <View style={styles.hiddenContainer}>
         <ViewShot ref={printableRef} options={{ format: 'png', quality: 1.0 }}>
           <View style={styles.printableTicket}>
@@ -384,7 +767,7 @@ const TicketDetailScreen = () => {
                       </View>
                       <View style={styles.printableCol}>
                         <Text style={styles.printableLabel}>NOMOR KURSI</Text>
-                        <Text style={[styles.printableValue, { color: '#1E88E5', fontSize: 18 }]}>{currentTicket.seats[idx]}</Text>
+                        <Text style={[styles.printableValue, { color: C.primary, fontSize: 18 }]}>{currentTicket.seats[idx]}</Text>
                       </View>
                     </View>
                   </View>
@@ -401,443 +784,67 @@ const TicketDetailScreen = () => {
                         passenger_name: currentTicket.passengerInfo?.[0]?.name,
                         timestamp: Math.floor(Date.now() / 1000),
                       })}
-                      size={150}
+                      size={130}
                     />
                   )}
                 </View>
-                <Text style={[styles.printableValue, { color: '#1E88E5', letterSpacing: 2, marginTop: 10 }]}>{currentTicket?.id}</Text>
+                <Text style={[styles.printableValue, { color: C.primary, letterSpacing: 2, marginTop: 8 }]}>{currentTicket?.id}</Text>
                 <Text style={styles.printableLabel}>Tunjukkan QR Code ini kepada petugas saat boarding</Text>
               </View>
             </View>
 
             <View style={styles.printableFooter}>
-                <Text style={styles.printableFooterTitle}>Catatan Penting:</Text>
-                <Text style={styles.printableFooterText}>1. Harap hadir 30 menit sebelum jadwal keberangkatan.</Text>
-                <Text style={styles.printableFooterText}>2. Tiket ini merupakan bukti pembayaran yang sah.</Text>
-                <Text style={styles.printableFooterText}>3. Dilarang membawa barang-barang terlarang dan berbahaya.</Text>
-                <Text style={styles.printableFooterText}>4. Informasi lebih lanjut hubungi Support: +62 812-3456-7890</Text>
+              <Text style={styles.printableFooterTitle}>Catatan Penting:</Text>
+              <Text style={styles.printableFooterText}>1. Harap hadir 30 menit sebelum jadwal keberangkatan.</Text>
+              <Text style={styles.printableFooterText}>2. Tiket ini merupakan bukti pembayaran yang sah.</Text>
+              <Text style={styles.printableFooterText}>3. Dilarang membawa barang-barang terlarang dan berbahaya.</Text>
+              <Text style={styles.printableFooterText}>4. Informasi lebih lanjut hubungi Support: +62 812-3456-7890</Text>
             </View>
           </View>
         </ViewShot>
       </View>
-
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#FFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Detail Tiket</Text>
-        <TouchableOpacity 
-          style={styles.shareButton}
-          onPress={() => setShowShareOptions(true)}
-        >
-          <Ionicons name="share-outline" size={24} color="#FFF" />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Ticket Card (for screenshot) */}
-        <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 0.9 }}>
-          <View style={styles.ticketContainer}>
-            {/* Ticket Header */}
-            <View style={styles.ticketHeader}>
-              <View style={styles.ticketIdContainer}>
-                <Text style={styles.ticketId}>{currentTicket.id}</Text>
-                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(currentTicket.status) }]}>
-                  <Text style={styles.statusText}>{getStatusText(currentTicket.status)}</Text>
-                </View>
-              </View>
-              <Text style={styles.bookingId}>Booking ID: {currentTicket.bookingId}</Text>
-            </View>
-
-            {/* Bus Info */}
-            <View style={styles.busInfoCard}>
-              <View style={styles.busHeader}>
-                <View style={styles.busIconContainer}>
-                  <Ionicons name="bus" size={32} color="#1E88E5" />
-                </View>
-                <View style={styles.busInfo}>
-                  <Text style={styles.busName}>{currentTicket.busName}</Text>
-                  <Text style={styles.busNumber}>{currentTicket.busNumber} • {currentTicket.bookingClass}</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Route Info */}
-            <View style={styles.routeCard}>
-              <View style={styles.routeHeader}>
-                <Text style={styles.routeTitle}>Rute Perjalanan</Text>
-                <TouchableOpacity onPress={handleOpenMaps} style={styles.mapButton}>
-                  <Ionicons name="map-outline" size={20} color="#1E88E5" />
-                  <Text style={styles.mapButtonText}>Peta</Text>
-                </TouchableOpacity>
-              </View>
-              
-              <View style={styles.routeDetails}>
-                <View style={styles.routeStop}>
-                  <View style={styles.routeDot} />
-                  <View style={styles.routeInfo}>
-                    <Text style={styles.routeCity}>{currentTicket.departure}</Text>
-                    <Text style={styles.routePoint}>{currentTicket.boardingPoint}</Text>
-                    <Text style={styles.routeTime}>{formatTime(currentTicket.departureTime)}</Text>
-                  </View>
-                  <Text style={styles.routeDate}>
-                    {format(currentTicket.departureDate, 'd MMM yyyy')}
-                  </Text>
-                </View>
-                
-                <View style={styles.routeDuration}>
-                  <View style={styles.durationLine} />
-                  <View style={styles.durationInfo}>
-                    <Ionicons name="time-outline" size={16} color="#666" />
-                    <Text style={styles.durationText}>
-                      {currentTicket.departureTime && currentTicket.arrivalTime 
-                        ? `${Math.abs(new Date(`2000-01-01 ${currentTicket.arrivalTime}`) - new Date(`2000-01-01 ${currentTicket.departureTime}`)) / (1000 * 60 * 60)} jam`
-                        : '4 jam'
-                      }
-                    </Text>
-                  </View>
-                </View>
-                
-                <View style={styles.routeStop}>
-                  <View style={[styles.routeDot, styles.destinationDot]} />
-                  <View style={styles.routeInfo}>
-                    <Text style={styles.routeCity}>{currentTicket.destination}</Text>
-                    <Text style={styles.routePoint}>{currentTicket.dropPoint}</Text>
-                    <Text style={styles.routeTime}>{formatTime(currentTicket.arrivalTime)}</Text>
-                  </View>
-                  <Text style={styles.routeDate}>
-                    {format(currentTicket.departureDate, 'd MMM yyyy')}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Passenger Info */}
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Informasi Penumpang</Text>
-              {currentTicket.passengerInfo?.map(renderPassengerInfo) || (
-                <Text style={styles.noDataText}>Tidak ada data penumpang</Text>
-              )}
-            </View>
-
-            {/* Seat Info */}
-            <View style={styles.seatCard}>
-              <Text style={styles.sectionTitle}>Kursi Terpilih</Text>
-              <View style={styles.seatsContainer}>
-                {currentTicket.seats.map((seat, index) => (
-                  <View key={index} style={styles.seatBadge}>
-                    <Text style={styles.seatText}>{seat}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-
-            {/* Facilities */}
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Fasilitas</Text>
-              <View style={styles.facilitiesContainer}>
-                {currentTicket.facilities.map(renderFacility)}
-              </View>
-            </View>
-
-            {/* Price Breakdown */}
-            {renderPriceBreakdown()}
-
-            {/* QR Code */}
-            <View style={styles.qrCard}>
-              <Text style={styles.sectionTitle}>Kode Tiket</Text>
-              <TouchableOpacity 
-                style={styles.qrContainer}
-                onPress={() => setShowQRModal(true)}
-              >
-                <View style={styles.qrPlaceholder}>
-                  {currentTicket.qrCode && currentTicket.qrCode !== '-' ? (
-                    <QRCode
-                      value={JSON.stringify({
-                        ticket_code: currentTicket.id,
-                        booking_id: currentTicket.bookingId,
-                      })}
-                      size={140}
-                      color="#000"
-                      backgroundColor="#F5F5F5"
-                    />
-                  ) : (
-                    <Ionicons name="qr-code-outline" size={80} color="#1E88E5" />
-                  )}
-                  <Text style={styles.qrText}>Scan untuk boarding</Text>
-                  <Text style={styles.qrCode}>{currentTicket.id}</Text>
-                </View>
-              </TouchableOpacity>
-              <Text style={styles.qrInstruction}>
-                Tunjukkan QR code ini saat boarding
-              </Text>
-            </View>
-
-            {/* Important Notes */}
-            <View style={styles.notesCard}>
-              <View style={styles.notesHeader}>
-                <Ionicons name="information-circle" size={20} color="#FF9800" />
-                <Text style={styles.notesTitle}>Catatan Penting</Text>
-              </View>
-              <View style={styles.notesContent}>
-                <Text style={styles.noteText}>• Hadir di boarding point 30 menit sebelum keberangkatan</Text>
-                <Text style={styles.noteText}>• Bawa bukti identitas asli</Text>
-                <Text style={styles.noteText}>• Tiket tidak dapat diubah atau dibatalkan 2 jam sebelum keberangkatan</Text>
-                <Text style={styles.noteText}>• Dilarang membawa barang berbahaya</Text>
-              </View>
-            </View>
-          </View>
-        </ViewShot>
-
-        {/* Action Buttons */}
-        <View style={styles.actionContainer}>
-          {currentTicket.status === 'confirmed' && (
-            <>
-              <TouchableOpacity 
-                style={styles.primaryButton}
-                onPress={handleDownload}
-                disabled={actionLoading}
-              >
-                {actionLoading ? (
-                  <ActivityIndicator color="#FFF" />
-                ) : (
-                  <>
-                    <Ionicons name="download-outline" size={20} color="#FFF" />
-                    <Text style={styles.primaryButtonText}>Download Tiket</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.secondaryButton}
-                onPress={() => setShowCancelModal(true)}
-                disabled={actionLoading}
-              >
-                <Ionicons name="close-circle-outline" size={20} color="#F44336" />
-                <Text style={styles.secondaryButtonText}>Batalkan Tiket</Text>
-              </TouchableOpacity>
-            </>
-          )}
-
-          {currentTicket.status === 'pending' && (
-            <TouchableOpacity 
-              style={styles.payButton}
-              onPress={() => navigation.navigate('Payment', { bookingId: currentTicket.bookingId })}
-              disabled={actionLoading}
-            >
-              <Ionicons name="card-outline" size={20} color="#FFF" />
-              <Text style={styles.payButtonText}>Bayar Sekarang</Text>
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity 
-            style={styles.supportButton}
-            onPress={handleContactSupport}
-          >
-            <Ionicons name="headset-outline" size={20} color="#1E88E5" />
-            <Text style={styles.supportButtonText}>Hubungi Support</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.supportButton, { marginTop: 12, borderColor: '#1E88E5' }]}
-            onPress={() => navigation.reset({
-              index: 0,
-              routes: [{ name: 'PassengerHome' }],
-            })}
-          >
-            <Ionicons name="home-outline" size={20} color="#1E88E5" />
-            <Text style={styles.supportButtonText}>Kembali ke Beranda</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-
-      {/* Share Options Modal */}
-      <Modal
-        visible={showShareOptions}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowShareOptions(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Bagikan Tiket</Text>
-              <TouchableOpacity onPress={() => setShowShareOptions(false)}>
-                <Ionicons name="close" size={24} color="#666" />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.modalContent}>
-              <TouchableOpacity 
-                style={styles.modalOption}
-                onPress={handleShare}
-              >
-                <Ionicons name="share-social-outline" size={28} color="#1E88E5" />
-                <Text style={styles.modalOptionText}>Bagikan via Media Sosial</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.modalOption}
-                onPress={handleDownload}
-              >
-                <Ionicons name="download-outline" size={28} color="#4CAF50" />
-                <Text style={styles.modalOptionText}>Download ke Galeri</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.modalOption, styles.cancelOption]}
-                onPress={() => setShowShareOptions(false)}
-              >
-                <Text style={styles.cancelOptionText}>Batal</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Cancel Ticket Modal */}
-      <Modal
-        visible={showCancelModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowCancelModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.cancelModalContainer}>
-            <View style={styles.cancelModalHeader}>
-              <Text style={styles.cancelModalTitle}>Batalkan Tiket</Text>
-              <Text style={styles.cancelModalSubtitle}>
-                Apakah Anda yakin ingin membatalkan tiket ini?
-              </Text>
-            </View>
-            
-            <View style={styles.cancelModalContent}>
-              <Text style={styles.inputLabel}>Alasan Pembatalan</Text>
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Masukkan alasan pembatalan"
-                  value={cancellationReason}
-                  onChangeText={setCancellationReason}
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                />
-              </View>
-              
-              <Text style={styles.refundInfo}>
-                Dana akan dikembalikan dalam 3-5 hari kerja ke metode pembayaran awal.
-              </Text>
-              
-              <View style={styles.cancelModalActions}>
-                <TouchableOpacity 
-                  style={[styles.modalButton, styles.cancelModalButton]}
-                  onPress={() => setShowCancelModal(false)}
-                >
-                  <Text style={styles.cancelModalButtonText}>Batal</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={[styles.modalButton, styles.confirmCancelButton]}
-                  onPress={handleCancelTicket}
-                  disabled={actionLoading}
-                >
-                  {actionLoading ? (
-                    <ActivityIndicator color="#FFF" />
-                  ) : (
-                    <Text style={styles.confirmCancelButtonText}>Ya, Batalkan</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* QR Code Modal */}
-      <Modal
-        visible={showQRModal}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setShowQRModal(false)}
-      >
-        <View style={styles.qrModalOverlay}>
-          <View style={styles.qrModalContainer}>
-            <View style={styles.qrModalHeader}>
-              <Text style={styles.qrModalTitle}>Kode Boarding</Text>
-              <TouchableOpacity onPress={() => setShowQRModal(false)}>
-                <Ionicons name="close" size={24} color="#FFF" />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.qrModalContent}>
-              <View style={styles.qrCodeDisplay}>
-                {currentTicket.qrCode && currentTicket.qrCode !== '-' ? (
-                  <QRCode
-                    value={JSON.stringify({
-                      ticket_code: currentTicket.id,
-                      booking_id: currentTicket.bookingId,
-                      passenger_name: currentTicket.passengerInfo?.[0]?.name,
-                      timestamp: Math.floor(Date.now() / 1000),
-                    })}
-                    size={220}
-                    color="#000"
-                    backgroundColor="#FFF"
-                  />
-                ) : (
-                  <Ionicons name="qr-code" size={200} color="#000" />
-                )}
-                <Text style={styles.qrCodeText}>{currentTicket.id}</Text>
-              </View>
-              <Text style={styles.qrModalInstruction}>
-                Tunjukkan kode ini kepada petugas boarding
-              </Text>
-              <View style={styles.qrModalInfo}>
-                <View style={styles.qrInfoRow}>
-                  <Text style={styles.qrInfoLabel}>Bus:</Text>
-                  <Text style={styles.qrInfoValue}>{currentTicket.busName}</Text>
-                </View>
-                <View style={styles.qrInfoRow}>
-                  <Text style={styles.qrInfoLabel}>Tanggal:</Text>
-                  <Text style={styles.qrInfoValue}>
-                    {format(currentTicket.departureDate, 'd MMM yyyy')}
-                  </Text>
-                </View>
-                <View style={styles.qrInfoRow}>
-                  <Text style={styles.qrInfoLabel}>Waktu:</Text>
-                  <Text style={styles.qrInfoValue}>{currentTicket.departureTime}</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: C.headerBg,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: C.surface,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: C.textSub,
+    fontSize: 15,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1E88E5',
+    backgroundColor: C.headerBg,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   backButton: {
     padding: 4,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#FFF',
+    fontWeight: '700',
+    color: C.headerText,
   },
   shareButton: {
     padding: 4,
+  },
+  scrollContent: {
+    paddingBottom: 24,
+    backgroundColor: C.surface,
   },
   ticketContainer: {
     padding: 16,
@@ -853,34 +860,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ticketId: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 18,
+    fontWeight: '700',
+    color: C.text,
     marginRight: 8,
   },
   statusBadge: {
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
   statusText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: 'bold',
+    color: C.white,
+    fontSize: 10,
+    fontWeight: '600',
   },
   bookingId: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 11,
+    color: C.textSub,
   },
   busInfoCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: C.white,
+    borderRadius: 14,
+    padding: 14,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
   },
   busHeader: {
@@ -888,10 +895,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   busIconContainer: {
-    backgroundColor: '#E3F2FD',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    backgroundColor: C.primaryLight,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -900,48 +907,48 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   busName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 16,
+    fontWeight: '700',
+    color: C.text,
   },
   busNumber: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: C.textSub,
     marginTop: 2,
   },
   routeCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: C.white,
+    borderRadius: 14,
+    padding: 14,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
   },
   routeHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   routeTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#333',
+    color: C.text,
   },
   mapButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E3F2FD',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    backgroundColor: C.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 6,
   },
   mapButtonText: {
-    color: '#1E88E5',
-    fontSize: 12,
+    color: C.primary,
+    fontSize: 11,
     fontWeight: '500',
     marginLeft: 4,
   },
@@ -952,146 +959,146 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   routeDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#1E88E5',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: C.primary,
     marginTop: 4,
-    marginRight: 12,
+    marginRight: 10,
   },
   destinationDot: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: C.green,
   },
   routeInfo: {
     flex: 1,
   },
   routeCity: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#333',
+    color: C.text,
   },
   routePoint: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
+    fontSize: 12,
+    color: C.textSub,
+    marginTop: 1,
   },
   routeTime: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
-    color: '#333',
-    marginTop: 4,
+    color: C.text,
+    marginTop: 3,
   },
   routeDate: {
-    fontSize: 12,
-    color: '#666',
-    marginLeft: 12,
+    fontSize: 11,
+    color: C.textSub,
+    marginLeft: 10,
   },
   routeDuration: {
-    marginLeft: 5,
-    marginVertical: 8,
+    marginLeft: 4,
+    marginVertical: 6,
   },
   durationLine: {
     width: 2,
-    height: 40,
-    backgroundColor: '#1E88E5',
-    marginLeft: 5,
+    height: 35,
+    backgroundColor: C.primary,
+    marginLeft: 4,
   },
   durationInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 6,
   },
   durationText: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 11,
+    color: C.textSub,
     marginLeft: 6,
   },
   sectionCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: C.white,
+    borderRadius: 14,
+    padding: 14,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
+    color: C.text,
+    marginBottom: 10,
   },
   passengerCard: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
+    backgroundColor: C.surface,
+    borderRadius: 10,
     padding: 12,
     marginBottom: 8,
   },
   passengerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   passengerNumber: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#1E88E5',
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: C.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   passengerNumberText: {
-    color: '#FFF',
-    fontSize: 12,
+    color: C.white,
+    fontSize: 11,
     fontWeight: 'bold',
   },
   passengerName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#333',
+    color: C.text,
   },
   passengerDetails: {
-    marginLeft: 36,
+    marginLeft: 32,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 3,
   },
   detailLabel: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 11,
+    color: C.textSub,
     marginLeft: 6,
     marginRight: 4,
     width: 50,
   },
   detailValue: {
-    fontSize: 14,
-    color: '#333',
+    fontSize: 13,
+    color: C.text,
     flex: 1,
   },
   noDataText: {
     fontSize: 14,
-    color: '#999',
+    color: C.textMuted,
     fontStyle: 'italic',
     textAlign: 'center',
-    paddingVertical: 20,
+    paddingVertical: 16,
   },
   seatCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: C.white,
+    borderRadius: 14,
+    padding: 14,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
   },
   seatsContainer: {
@@ -1099,17 +1106,19 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   seatBadge: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: C.primaryLight,
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingVertical: 5,
+    borderRadius: 8,
     marginRight: 8,
-    marginBottom: 8,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: C.primaryMuted,
   },
   seatText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
-    color: '#1E88E5',
+    color: C.primary,
   },
   facilitiesContainer: {
     flexDirection: 'row',
@@ -1119,48 +1128,48 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     width: '50%',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   facilityText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#555',
+    marginLeft: 6,
+    fontSize: 13,
+    color: C.textSub,
   },
   priceCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: C.white,
+    borderRadius: 14,
+    padding: 14,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
   },
   priceTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
+    color: C.text,
+    marginBottom: 10,
   },
   priceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   priceLabel: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: C.textSub,
   },
   priceValue: {
-    fontSize: 14,
-    color: '#333',
+    fontSize: 13,
+    color: C.text,
     fontWeight: '500',
   },
   divider: {
     height: 1,
-    backgroundColor: '#E0E0E0',
-    marginVertical: 12,
+    backgroundColor: C.border,
+    marginVertical: 10,
   },
   totalRow: {
     flexDirection: 'row',
@@ -1168,102 +1177,107 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   totalLabel: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#333',
+    color: C.text,
   },
   totalValue: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#1E88E5',
+    color: C.primary,
   },
   qrCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: C.white,
+    borderRadius: 14,
+    padding: 14,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
     alignItems: 'center',
   },
   qrContainer: {
-    backgroundColor: '#F5F5F5',
-    width: 200,
-    height: 200,
+    backgroundColor: C.surface,
+    width: 170,
+    height: 170,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: C.border,
   },
   qrPlaceholder: {
     alignItems: 'center',
   },
   qrText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 8,
+    fontSize: 11,
+    color: C.textSub,
+    marginTop: 6,
   },
   qrCode: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 'bold',
-    color: '#333',
-    marginTop: 4,
+    color: C.text,
+    marginTop: 3,
     letterSpacing: 1,
   },
   qrInstruction: {
     fontSize: 12,
-    color: '#666',
+    color: C.textSub,
     textAlign: 'center',
   },
   notesCard: {
-    backgroundColor: '#FFF8E1',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: C.amberLight,
+    borderRadius: 14,
+    padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#FFECB3',
+    borderColor: C.amber,
   },
   notesHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   notesTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#FF9800',
+    color: C.amber,
     marginLeft: 8,
   },
   notesContent: {
-    marginLeft: 28,
+    marginLeft: 26,
   },
   noteText: {
-    fontSize: 12,
-    color: '#FF9800',
-    marginBottom: 4,
+    fontSize: 11,
+    color: C.amber,
+    marginBottom: 3,
     lineHeight: 16,
   },
   actionContainer: {
     padding: 16,
-    paddingBottom: 32,
+    paddingBottom: 8,
   },
   primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#1E88E5',
-    borderRadius: 8,
+    backgroundColor: C.primary,
+    borderRadius: 10,
     paddingVertical: 14,
-    marginBottom: 12,
+    marginBottom: 10,
+    shadowColor: C.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   primaryButtonText: {
-    color: '#FFF',
-    fontSize: 16,
+    color: C.white,
+    fontSize: 15,
     fontWeight: '600',
     marginLeft: 8,
   },
@@ -1271,16 +1285,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     borderWidth: 1,
-    borderColor: '#F44336',
-    borderRadius: 8,
+    borderColor: C.red,
+    borderRadius: 10,
     paddingVertical: 14,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   secondaryButtonText: {
-    color: '#F44336',
-    fontSize: 16,
+    color: C.red,
+    fontSize: 15,
     fontWeight: '600',
     marginLeft: 8,
   },
@@ -1288,14 +1302,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4CAF50',
-    borderRadius: 8,
+    backgroundColor: C.green,
+    borderRadius: 10,
     paddingVertical: 14,
-    marginBottom: 12,
+    marginBottom: 10,
+    shadowColor: C.green,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   payButtonText: {
-    color: '#FFF',
-    fontSize: 16,
+    color: C.white,
+    fontSize: 15,
     fontWeight: '600',
     marginLeft: 8,
   },
@@ -1303,15 +1322,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
+    borderColor: C.border,
+    borderRadius: 10,
     paddingVertical: 14,
   },
   supportButtonText: {
-    color: '#1E88E5',
-    fontSize: 16,
+    color: C.primary,
+    fontSize: 15,
     fontWeight: '600',
     marginLeft: 8,
   },
@@ -1321,10 +1340,10 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContainer: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingBottom: 24,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1332,12 +1351,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: C.border,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 17,
+    fontWeight: '700',
+    color: C.text,
   },
   modalContent: {
     padding: 16,
@@ -1345,116 +1364,118 @@ const styles = StyleSheet.create({
   modalOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 14,
     paddingHorizontal: 16,
-    borderRadius: 8,
+    borderRadius: 10,
     marginBottom: 8,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: C.surface,
   },
   modalOptionText: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: 15,
+    color: C.text,
     marginLeft: 12,
     flex: 1,
   },
   cancelOption: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: C.border,
     marginTop: 8,
   },
   cancelOptionText: {
-    color: '#666',
-    fontSize: 16,
+    color: C.textSub,
+    fontSize: 15,
     fontWeight: '500',
     textAlign: 'center',
     flex: 1,
   },
   cancelModalContainer: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     borderRadius: 16,
     marginHorizontal: 20,
     overflow: 'hidden',
   },
   cancelModalHeader: {
     padding: 20,
-    backgroundColor: '#FFEBEE',
+    backgroundColor: C.redLight,
     alignItems: 'center',
   },
   cancelModalTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: 'bold',
-    color: '#D32F2F',
+    color: C.red,
     marginBottom: 4,
   },
   cancelModalSubtitle: {
-    fontSize: 14,
-    color: '#D32F2F',
+    fontSize: 13,
+    color: C.red,
     textAlign: 'center',
   },
   cancelModalContent: {
     padding: 20,
   },
   inputLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
-    color: '#333',
+    color: C.text,
     marginBottom: 8,
   },
   inputContainer: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
+    backgroundColor: C.surface,
+    borderRadius: 10,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: C.border,
   },
   textInput: {
     padding: 12,
     fontSize: 14,
-    color: '#333',
+    color: C.text,
     minHeight: 80,
   },
   refundInfo: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 11,
+    color: C.textSub,
     textAlign: 'center',
     marginBottom: 20,
     lineHeight: 16,
   },
   cancelModalActions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
   modalButton: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
   },
   cancelModalButton: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: C.border,
   },
   cancelModalButtonText: {
-    color: '#666',
+    color: C.textSub,
     fontSize: 14,
     fontWeight: '500',
   },
   confirmCancelButton: {
-    backgroundColor: '#F44336',
+    backgroundColor: C.red,
   },
   confirmCancelButtonText: {
-    color: '#FFF',
+    color: C.white,
     fontSize: 14,
     fontWeight: '600',
   },
   qrModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   qrModalContainer: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: C.text,
     borderRadius: 20,
     width: width * 0.9,
     overflow: 'hidden',
@@ -1464,162 +1485,163 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#000',
+    backgroundColor: C.text,
   },
   qrModalTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
-    color: '#FFF',
+    color: C.white,
   },
   qrModalContent: {
-    padding: 24,
+    padding: 20,
     alignItems: 'center',
+    backgroundColor: C.white,
   },
   qrCodeDisplay: {
-    backgroundColor: '#FFF',
-    padding: 20,
+    backgroundColor: C.white,
+    padding: 16,
     borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   qrCodeText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: '#000',
-    marginTop: 12,
+    color: C.text,
+    marginTop: 10,
     letterSpacing: 2,
   },
   qrModalInstruction: {
-    fontSize: 14,
-    color: '#FFF',
+    fontSize: 13,
+    color: C.textSub,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   qrModalInfo: {
-    backgroundColor: '#2C2C2C',
-    borderRadius: 8,
+    backgroundColor: C.surface,
+    borderRadius: 10,
     padding: 12,
     width: '100%',
   },
   qrInfoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   qrInfoLabel: {
     fontSize: 12,
-    color: '#999',
+    color: C.textSub,
   },
   qrInfoValue: {
     fontSize: 12,
-    color: '#FFF',
+    color: C.text,
     fontWeight: '500',
   },
   hiddenContainer: {
     position: 'absolute',
-    left: -1000, // Move off-screen
-    width: 600,  // Fixed width for high quality capture
-    backgroundColor: '#FFF',
+    left: -1000,
+    width: 600,
+    backgroundColor: C.white,
   },
   printableTicket: {
     width: 600,
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     borderWidth: 2,
-    borderColor: '#1E88E5',
+    borderColor: C.primary,
     borderRadius: 10,
     overflow: 'hidden',
   },
   printableHeader: {
-    backgroundColor: '#1E88E5',
-    padding: 20,
+    backgroundColor: C.primary,
+    padding: 18,
     alignItems: 'center',
   },
   printableTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#FFF',
+    color: C.white,
   },
   printableSubtitle: {
-    fontSize: 14,
-    color: '#FFF',
-    marginTop: 5,
+    fontSize: 13,
+    color: C.white,
+    marginTop: 4,
   },
   printableContent: {
-    padding: 20,
+    padding: 18,
   },
   printableRow: {
     flexDirection: 'row',
-    marginBottom: 15,
+    marginBottom: 12,
   },
   printableCol: {
     flex: 1,
   },
   printableLabel: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 11,
+    color: C.textSub,
     marginBottom: 2,
   },
   printableValue: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
-    color: '#333',
+    color: C.text,
   },
   printableSubValue: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 11,
+    color: C.textSub,
     marginTop: 2,
   },
   printableRouteInfo: {
-    backgroundColor: '#F5F5F5',
-    padding: 15,
+    backgroundColor: C.surface,
+    padding: 14,
     borderRadius: 5,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   printablePassengerSection: {
-    marginTop: 20,
+    marginTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#EEE',
-    paddingTop: 20,
+    borderTopColor: C.border,
+    paddingTop: 16,
   },
   printableSectionTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 15,
+    color: C.text,
+    marginBottom: 12,
   },
   printablePassengerRow: {
-    marginBottom: 10,
+    marginBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    paddingBottom: 5,
+    borderBottomColor: C.surfaceAlt,
+    paddingBottom: 4,
   },
   printableQrSection: {
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#CCC',
+    borderTopColor: C.border,
     borderStyle: 'dashed',
-    marginTop: 10,
+    marginTop: 8,
   },
   printableQrWrapper: {
-    padding: 10,
-    backgroundColor: '#FFF',
+    padding: 8,
+    backgroundColor: C.white,
   },
   printableFooter: {
-    backgroundColor: '#F9F9F9',
-    padding: 15,
+    backgroundColor: C.surfaceAlt,
+    padding: 14,
     borderTopWidth: 1,
-    borderTopColor: '#EEE',
+    borderTopColor: C.border,
   },
   printableFooterTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 'bold',
-    color: '#555',
-    marginBottom: 5,
+    color: C.textSub,
+    marginBottom: 4,
   },
   printableFooterText: {
-    fontSize: 11,
-    color: '#777',
+    fontSize: 10,
+    color: C.textSub,
     marginBottom: 2,
   },
 });

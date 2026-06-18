@@ -5,12 +5,12 @@ import { Platform, Alert } from 'react-native';
 const getBaseURL = () => {
   if (__DEV__) {
     if (Platform.OS === 'android') {
-      return 'https://5f8f-157-15-41-36.ngrok-free.app'; // IP komputer Anda
+      return 'https://progressionally-toed-tamela.ngrok-free.dev/api'; // IP komputer Anda
     } else {
-      return 'http://localhost:8000/api'; // untuk iOS simulator
+      return 'http://localhost:8000'; // untuk iOS simulator
     }
   } else {
-    return 'https://api.busticketing.com/api';
+    return 'https://api.busticketing.com';
   }
 };
 

@@ -15,6 +15,30 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Camera, useCameraDevice, useCodeScanner, useCameraPermission } from 'react-native-vision-camera';
 import { conductorService } from '../../services/conductorService';
 
+// ─── Color Tokens ─────────────────────────────────────────────────────────────
+const C = {
+  primary: '#2563EB',
+  primaryLight: '#EFF6FF',
+  primaryMuted: '#BFDBFE',
+  bg: '#FFFFFF',
+  surface: '#F8FAFC',
+  surfaceAlt: '#F1F5F9',
+  border: '#E2E8F0',
+  text: '#0F172A',
+  textSub: '#64748B',
+  textMuted: '#94A3B8',
+  green: '#10B981',
+  greenLight: '#ECFDF5',
+  amber: '#F59E0B',
+  amberLight: '#FFFBEB',
+  red: '#EF4444',
+  redLight: '#FEF2F2',
+  white: '#FFFFFF',
+  headerBg: '#1E3A5F',
+  headerText: '#FFFFFF',
+  headerSub: '#93C5FD',
+};
+
 const { width } = Dimensions.get('window');
 
 export default function ScanTicketScreen({ route, navigation }) {
@@ -26,13 +50,9 @@ export default function ScanTicketScreen({ route, navigation }) {
   const [flashMode, setFlashMode] = useState(false);
   const [showResultModal, setShowResultModal] = useState(false);
 
-  // 1. Handle Permissions
   const { hasPermission, requestPermission } = useCameraPermission();
-
-  // 2. Get Device
   const device = useCameraDevice('back');
 
-  // 3. Handle Scan Logic
   const handleTicketScan = useCallback(async (value) => {
     if (loading || scanned || showResultModal) return;
     
@@ -41,15 +61,12 @@ export default function ScanTicketScreen({ route, navigation }) {
 
     try {
       let ticketCode = value;
-      // Try to parse if value is JSON
       try {
         const parsed = JSON.parse(value);
         if (parsed.ticket_code) {
           ticketCode = parsed.ticket_code;
         }
-      } catch (e) {
-        // Not a JSON, use as is
-      }
+      } catch (e) {}
 
       const response = await conductorService.scanTicket(ticketCode);
       setScanResult(response.data.data);
@@ -65,7 +82,6 @@ export default function ScanTicketScreen({ route, navigation }) {
     }
   }, [loading, scanned, showResultModal]);
 
-  // 4. Configure Scanner
   const codeScanner = useCodeScanner({
     codeTypes: ['qr'],
     onCodeScanned: (codes) => {
@@ -87,17 +103,19 @@ export default function ScanTicketScreen({ route, navigation }) {
     ]);
   };
 
-  // Permission Request UI
   if (!hasPermission) {
     return (
       <SafeAreaView style={styles.errorContainer}>
-        <Icon name="camera-alt" size={64} color="#666" />
-        <Text style={styles.errorText}>Izin kamera diperlukan untuk memindai tiket.</Text>
+        <View style={styles.errorIconWrap}>
+          <Icon name="camera-alt" size={56} color={C.textMuted} />
+        </View>
+        <Text style={styles.errorTitle}>Izin Kamera Diperlukan</Text>
+        <Text style={styles.errorText}>Kami memerlukan akses kamera untuk memindai QR Code tiket penumpang.</Text>
         <TouchableOpacity style={styles.retryButton} onPress={requestPermission}>
           <Text style={styles.retryButtonText}>Berikan Izin</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.retryButton, {marginTop: 10, backgroundColor: '#666'}]} onPress={() => navigation.goBack()}>
-          <Text style={styles.retryButtonText}>Kembali</Text>
+        <TouchableOpacity style={styles.errorBackButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.errorBackButtonText}>Kembali</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -105,23 +123,24 @@ export default function ScanTicketScreen({ route, navigation }) {
 
   if (!device) {
     return (
-      <SafeAreaView style={styles.loading}>
-        <ActivityIndicator size="large" color="#fff" />
-        <Text style={{ color: '#fff', marginTop: 10 }}>Mencari kamera…</Text>
-      </SafeAreaView>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={C.primary} />
+        <Text style={styles.loadingText}>Mencari kamera...</Text>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar hidden />
+      
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Icon name="arrow-back" size={24} color="#fff" />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+          <Icon name="arrow-back" size={24} color={C.white} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Scan Tiket</Text>
-        <TouchableOpacity onPress={() => setFlashMode(!flashMode)} style={styles.flashButton}>
-          <Icon name={flashMode ? 'flash-on' : 'flash-off'} size={24} color="#fff" />
+        <TouchableOpacity onPress={() => setFlashMode(!flashMode)} style={styles.headerButton}>
+          <Icon name={flashMode ? 'flash-on' : 'flash-off'} size={24} color={C.white} />
         </TouchableOpacity>
       </View>
 
@@ -134,16 +153,19 @@ export default function ScanTicketScreen({ route, navigation }) {
           codeScanner={codeScanner}
         />
         <View style={styles.overlay}>
-          <View style={styles.unfocusedContainer}></View>
+          <View style={styles.unfocusedContainer}>
+            <Text style={styles.scanHint}>Arahkan kamera ke QR Code</Text>
+          </View>
           <View style={styles.middleContainer}>
-            <View style={styles.unfocusedContainer}></View>
+            <View style={styles.unfocusedContainer} />
             <View style={styles.focusedContainer}>
               <View style={[styles.corner, styles.topLeft]} />
               <View style={[styles.corner, styles.topRight]} />
               <View style={[styles.corner, styles.bottomLeft]} />
               <View style={[styles.corner, styles.bottomRight]} />
+              <View style={styles.scanLine} />
             </View>
-            <View style={styles.unfocusedContainer}></View>
+            <View style={styles.unfocusedContainer} />
           </View>
           <View style={styles.unfocusedContainer}>
             <Text style={styles.scanText}>Arahkan kamera ke QR Code di tiket penumpang</Text>
@@ -153,12 +175,13 @@ export default function ScanTicketScreen({ route, navigation }) {
 
       {loading && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#1E88E5" />
-          <Text style={styles.loadingText}>Memvalidasi tiket...</Text>
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color={C.primary} />
+            <Text style={styles.loadingOverlayText}>Memvalidasi tiket...</Text>
+          </View>
         </View>
       )}
 
-      {/* Result Modal */}
       <Modal
         visible={showResultModal}
         transparent={true}
@@ -168,13 +191,18 @@ export default function ScanTicketScreen({ route, navigation }) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
-              <Icon 
-                name={scanResult?.boarding_status === 'boarded' ? 'check-circle' : 'info'} 
-                size={48} 
-                color={scanResult?.boarding_status === 'boarded' ? '#4CAF50' : '#1E88E5'} 
-              />
+              <View style={[styles.modalIconWrap, { backgroundColor: scanResult?.boarding_status === 'boarded' ? C.greenLight : C.primaryLight }]}>
+                <Icon 
+                  name={scanResult?.boarding_status === 'boarded' ? 'check-circle' : 'info'} 
+                  size={40} 
+                  color={scanResult?.boarding_status === 'boarded' ? C.green : C.primary} 
+                />
+              </View>
               <Text style={styles.modalTitle}>
                 {scanResult?.boarding_status === 'boarded' ? 'Valid & Boarded' : 'Tiket Valid'}
+              </Text>
+              <Text style={styles.modalSubtitle}>
+                {scanResult?.boarding_status === 'boarded' ? 'Penumpang sudah terkonfirmasi naik' : 'Penumpang belum naik bus'}
               </Text>
             </View>
 
@@ -196,20 +224,21 @@ export default function ScanTicketScreen({ route, navigation }) {
                 <Text style={styles.infoValue}>{scanResult?.schedule?.bus_name}</Text>
               </View>
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Status Boarding</Text>
-                <Text style={[styles.infoValue, { color: scanResult?.boarding_status === 'boarded' ? '#4CAF50' : '#FF9800' }]}>
-                  {scanResult?.boarding_status === 'boarded' ? 'Sudah Naik' : 'Belum Naik'}
+                <Text style={styles.infoLabel}>Status</Text>
+                <Text style={[styles.infoValue, { color: scanResult?.boarding_status === 'boarded' ? C.green : C.amber }]}>
+                  {scanResult?.boarding_status === 'boarded' ? 'Sudah Naik' : '⏳ Belum Naik'}
                 </Text>
               </View>
             </View>
 
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.closeButton} onPress={resetScan}>
-                <Text style={styles.closeButtonText}>Selesai</Text>
+                <Text style={styles.closeButtonText}>Tutup</Text>
               </TouchableOpacity>
               
               {scanResult?.boarding_status !== 'boarded' && (
                 <TouchableOpacity style={styles.confirmButton} onPress={confirmBoarding}>
+                  <Icon name="check" size={20} color={C.white} />
                   <Text style={styles.confirmButtonText}>Konfirmasi Naik</Text>
                 </TouchableOpacity>
               )}
@@ -222,47 +251,37 @@ export default function ScanTicketScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    zIndex: 10,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#000',
   },
-  backButton: { padding: 8 },
-  flashButton: { padding: 8 },
-  headerTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  loading: {
+  loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#000',
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  loadingText: {
+    color: C.white,
+    marginTop: 10,
+    fontSize: 14,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFF',
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    zIndex: 10,
+    backgroundColor: 'rgba(0,0,0,0.6)',
   },
-  errorText: {
-    fontSize: 16,
-    color: '#333',
-    textAlign: 'center',
-    marginTop: 20,
-    marginBottom: 30,
+  headerButton: {
+    padding: 6,
   },
-  retryButton: {
-    backgroundColor: '#1E88E5',
-    paddingHorizontal: 30,
-    paddingVertical: 12,
-    borderRadius: 25,
-  },
-  retryButtonText: {
-    color: '#FFF',
-    fontWeight: 'bold',
+  headerTitle: {
+    color: C.white,
+    fontSize: 17,
+    fontWeight: '700',
   },
   cameraContainer: {
     flex: 1,
@@ -273,7 +292,7 @@ const styles = StyleSheet.create({
   },
   unfocusedContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -289,10 +308,10 @@ const styles = StyleSheet.create({
   },
   corner: {
     position: 'absolute',
-    width: 40,
-    height: 40,
-    borderColor: '#1E88E5',
-    borderWidth: 4,
+    width: 30,
+    height: 30,
+    borderColor: C.primary,
+    borderWidth: 3,
   },
   topLeft: {
     top: 0,
@@ -318,12 +337,28 @@ const styles = StyleSheet.create({
     borderLeftWidth: 0,
     borderTopWidth: 0,
   },
+  scanLine: {
+    position: 'absolute',
+    top: '50%',
+    left: '10%',
+    right: '10%',
+    height: 2,
+    backgroundColor: C.primary,
+    opacity: 0.8,
+  },
+  scanHint: {
+    color: C.white,
+    fontSize: 12,
+    fontWeight: '500',
+    opacity: 0.8,
+  },
   scanText: {
-    color: '#fff',
-    fontSize: 14,
+    color: C.white,
+    fontSize: 13,
     textAlign: 'center',
-    paddingHorizontal: 20,
-    marginTop: 20,
+    paddingHorizontal: 30,
+    marginTop: 10,
+    opacity: 0.9,
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -331,22 +366,88 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingText: {
-    color: '#fff',
+  loadingCard: {
+    backgroundColor: C.white,
+    borderRadius: 16,
+    padding: 30,
+    alignItems: 'center',
+    minWidth: 200,
+  },
+  loadingOverlayText: {
+    color: C.text,
+    marginTop: 12,
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: C.white,
+    padding: 24,
+  },
+  errorIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: C.surfaceAlt,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: C.text,
+    marginTop: 20,
+  },
+  errorText: {
+    fontSize: 14,
+    color: C.textSub,
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 20,
+    paddingHorizontal: 20,
+  },
+  retryButton: {
+    backgroundColor: C.primary,
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 24,
+    shadowColor: C.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  retryButtonText: {
+    color: C.white,
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  errorBackButton: {
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 12,
     marginTop: 10,
-    fontSize: 16,
+  },
+  errorBackButtonText: {
+    color: C.textSub,
+    fontWeight: '600',
+    fontSize: 15,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   modalContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: C.white,
     borderRadius: 20,
     width: '100%',
+    maxWidth: 400,
     padding: 24,
     alignItems: 'center',
   },
@@ -354,65 +455,94 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
+  modalIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   modalTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 10,
+    fontSize: 20,
+    fontWeight: '700',
+    color: C.text,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: C.textSub,
+    marginTop: 4,
   },
   resultInfo: {
     width: '100%',
-    marginBottom: 24,
+    marginBottom: 20,
+    backgroundColor: C.surface,
+    borderRadius: 12,
+    padding: 12,
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: C.border,
+  },
+  infoRowLast: {
+    borderBottomWidth: 0,
   },
   infoLabel: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: C.textSub,
+    fontWeight: '500',
   },
   infoValue: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#333',
+    color: C.text,
     flex: 1,
     textAlign: 'right',
   },
   seatValue: {
-    fontSize: 18,
-    color: '#1E88E5',
+    fontSize: 16,
+    color: C.primary,
   },
   modalActions: {
     flexDirection: 'row',
     width: '100%',
-    gap: 12,
+    gap: 10,
   },
   closeButton: {
     flex: 1,
     paddingVertical: 14,
-    borderRadius: 10,
-    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    backgroundColor: C.surface,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: C.border,
   },
   closeButtonText: {
-    color: '#666',
-    fontWeight: 'bold',
-    fontSize: 16,
+    color: C.textSub,
+    fontWeight: '600',
+    fontSize: 15,
   },
   confirmButton: {
     flex: 2,
     paddingVertical: 14,
-    borderRadius: 10,
-    backgroundColor: '#1E88E5',
+    borderRadius: 12,
+    backgroundColor: C.green,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    shadowColor: C.green,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   confirmButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
+    color: C.white,
+    fontWeight: '700',
+    fontSize: 15,
+    marginLeft: 8,
   },
 });
