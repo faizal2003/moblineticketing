@@ -40,6 +40,30 @@ import {
   clearError,
 } from '../../store/slices/bookingSlice';
 
+// ─── Color Tokens ─────────────────────────────────────────────────────────────
+const C = {
+  primary: '#2563EB',
+  primaryLight: '#EFF6FF',
+  primaryMuted: '#BFDBFE',
+  bg: '#FFFFFF',
+  surface: '#F8FAFC',
+  surfaceAlt: '#F1F5F9',
+  border: '#E2E8F0',
+  text: '#0F172A',
+  textSub: '#64748B',
+  textMuted: '#94A3B8',
+  green: '#10B981',
+  greenLight: '#ECFDF5',
+  amber: '#F59E0B',
+  amberLight: '#FFFBEB',
+  red: '#EF4444',
+  redLight: '#FEF2F2',
+  white: '#FFFFFF',
+  headerBg: '#1E3A5F',
+  headerText: '#FFFFFF',
+  headerSub: '#93C5FD',
+};
+
 const BookingScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
@@ -57,7 +81,6 @@ const BookingScreen = () => {
   const [processing, setProcessing] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -79,7 +102,6 @@ const BookingScreen = () => {
   // Initialize with Redux data
   useEffect(() => {
     if (selectedBus && selectedSeats) {
-      // Set initial form data from Redux if available
       if (passengerInfo.mainPassenger.name) {
         setFormData(prev => ({
           ...prev,
@@ -127,7 +149,6 @@ const BookingScreen = () => {
       [field]: value,
     });
     
-    // Clear validation error for this field
     if (validationErrors[field]) {
       setValidationErrors({
         ...validationErrors,
@@ -200,7 +221,7 @@ const BookingScreen = () => {
     const basePrice = selectedBus.price || 150000;
     const seatCount = selectedSeats.length;
     const serviceFee = 5000;
-    const tax = (basePrice * seatCount) * 0.1; // 10% tax
+    const tax = (basePrice * seatCount) * 0.1;
     
     return (basePrice * seatCount) + tax + serviceFee;
   };
@@ -208,7 +229,6 @@ const BookingScreen = () => {
   const handleSubmitBooking = async () => {
     if (!validateForm()) return;
 
-    // Update passenger info in Redux
     dispatch(updatePassengerInfo({
       mainPassenger: {
         name: formData.fullName,
@@ -225,7 +245,6 @@ const BookingScreen = () => {
     setProcessing(true);
 
     try {
-      // Prepare booking data
       const bookingData = {
         busId: selectedBus.id,
         busName: selectedBus.name,
@@ -255,7 +274,6 @@ const BookingScreen = () => {
         bookingDate: new Date().toISOString(),
       };
 
-      // Dispatch create booking action
       const result = await dispatch(createBooking(bookingData)).unwrap();
       
       setProcessing(false);
@@ -267,12 +285,10 @@ const BookingScreen = () => {
     }
   };
 
-  const handlePayment = async () => {
+  const handleGoToPayment = async () => {
     setShowPaymentModal(false);
     setBookingSuccess(true);
     
-    // Navigate to payment screen with real booking ID from Redux state
-    // currentBooking was updated by createBooking.fulfilled
     setTimeout(() => {
       navigation.navigate('Payment', {
         bookingId: currentBooking.id,
@@ -283,22 +299,25 @@ const BookingScreen = () => {
 
   const renderPassengerForm = (passenger, index, isMain = false) => (
     <View key={isMain ? 'main' : index} style={styles.passengerForm}>
-      <Text style={styles.passengerTitle}>
-        {isMain ? 'Penumpang Utama' : `Penumpang ${index + 2}`}
+      <View style={styles.passengerHeader}>
+        <Text style={styles.passengerTitle}>
+          {isMain ? 'Penumpang Utama' : `Penumpang ${index + 2}`}
+        </Text>
         {!isMain && (
           <TouchableOpacity 
             style={styles.removePassengerButton}
             onPress={() => handleRemovePassenger(index)}
           >
+            <Ionicons name="close-circle" size={20} color={C.red} />
             <Text style={styles.removePassengerText}>Hapus</Text>
           </TouchableOpacity>
         )}
-      </Text>
+      </View>
       
       <TextInput
         style={[styles.input, validationErrors[isMain ? 'fullName' : `passenger_${index}_name`] && styles.inputError]}
         placeholder="Nama Lengkap"
-        placeholderTextColor="#999"
+        placeholderTextColor={C.textMuted}
         value={isMain ? formData.fullName : passenger.name}
         onChangeText={(text) => isMain 
           ? handleInputChange('fullName', text)
@@ -315,7 +334,7 @@ const BookingScreen = () => {
         <TextInput
           style={[styles.input, styles.identityInput, validationErrors[isMain ? 'identityNumber' : `passenger_${index}_identity`] && styles.inputError]}
           placeholder="Nomor Identitas"
-          placeholderTextColor="#999"
+          placeholderTextColor={C.textMuted}
           value={isMain ? formData.identityNumber : passenger.identityNumber}
           onChangeText={(text) => isMain 
             ? handleInputChange('identityNumber', text)
@@ -326,7 +345,7 @@ const BookingScreen = () => {
         {isMain && (
           <TouchableOpacity style={styles.identityTypeButton}>
             <Text style={styles.identityTypeText}>{formData.identityType}</Text>
-            <Ionicons name="chevron-down" size={16} color="#666" />
+            <Ionicons name="chevron-down" size={16} color={C.textSub} />
           </TouchableOpacity>
         )}
       </View>
@@ -342,9 +361,11 @@ const BookingScreen = () => {
     <View style={styles.summaryCard}>
       <View style={styles.summaryHeader}>
         <Text style={styles.summaryTitle}>Ringkasan Pemesanan</Text>
-        <Text style={styles.bookingId}>
-          ID: {currentBooking.bookingCode || 'Menunggu...'}
-        </Text>
+        <View style={styles.bookingIdBadge}>
+          <Text style={styles.bookingId}>
+            ID: {currentBooking.bookingCode || 'Menunggu...'}
+          </Text>
+        </View>
       </View>
       
       {selectedBus && (
@@ -360,9 +381,11 @@ const BookingScreen = () => {
             
             <View style={styles.routeDuration}>
               <View style={styles.durationLine} />
-              <Text style={styles.durationText}>
-                {selectedBus.duration || '4 jam'}
-              </Text>
+              <View style={styles.durationBadge}>
+                <Text style={styles.durationText}>
+                  {selectedBus.duration || '4 jam'}
+                </Text>
+              </View>
             </View>
             
             <View style={styles.routeStop}>
@@ -376,30 +399,38 @@ const BookingScreen = () => {
           
           <View style={styles.detailsGrid}>
             <View style={styles.detailItem}>
-              <Ionicons name="bus-outline" size={20} color="#666" />
+              <View style={styles.detailIconWrap}>
+                <Ionicons name="bus-outline" size={18} color={C.primary} />
+              </View>
               <Text style={styles.detailLabel}>Bus</Text>
               <Text style={styles.detailValue}>{selectedBus.name}</Text>
             </View>
             
             <View style={styles.detailItem}>
-              <Ionicons name="people-outline" size={20} color="#666" />
+              <View style={styles.detailIconWrap}>
+                <Ionicons name="people-outline" size={18} color={C.primary} />
+              </View>
               <Text style={styles.detailLabel}>Penumpang</Text>
               <Text style={styles.detailValue}>{selectedSeats.length} orang</Text>
             </View>
             
             <View style={styles.detailItem}>
-              <Ionicons name="calendar-outline" size={20} color="#666" />
+              <View style={styles.detailIconWrap}>
+                <Ionicons name="calendar-outline" size={18} color={C.primary} />
+              </View>
               <Text style={styles.detailLabel}>Tanggal</Text>
               <Text style={styles.detailValue}>
                 {selectedBus.departureDate 
-                  ? new Date(selectedBus.departureDate).toLocaleDateString('id-ID')
-                  : new Date().toLocaleDateString('id-ID')
+                  ? new Date(selectedBus.departureDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                  : new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
                 }
               </Text>
             </View>
             
             <View style={styles.detailItem}>
-              <Ionicons name="time-outline" size={20} color="#666" />
+              <View style={styles.detailIconWrap}>
+                <Ionicons name="time-outline" size={18} color={C.primary} />
+              </View>
               <Text style={styles.detailLabel}>Waktu</Text>
               <Text style={styles.detailValue}>{selectedBus.departureTime || '08:00'}</Text>
             </View>
@@ -419,47 +450,6 @@ const BookingScreen = () => {
           </View>
         </View>
       )}
-    </View>
-  );
-
-  const renderPaymentMethod = () => (
-    <View style={styles.sectionContainer}>
-      <Text style={styles.sectionTitle}>Metode Pembayaran</Text>
-      
-      {['bank_transfer', 'e_wallet', 'credit_card', 'cash'].map((method) => (
-        <TouchableOpacity
-          key={method}
-          style={[
-            styles.paymentOption,
-            paymentMethod === method && styles.paymentOptionSelected,
-          ]}
-          onPress={() => setPaymentMethod(method)}
-        >
-          <View style={styles.paymentIcon}>
-            {method === 'bank_transfer' && <Ionicons name="business-outline" size={24} color="#4CAF50" />}
-            {method === 'e_wallet' && <Ionicons name="phone-portrait-outline" size={24} color="#FF9800" />}
-            {method === 'credit_card' && <Ionicons name="card-outline" size={24} color="#2196F3" />}
-            {method === 'cash' && <Ionicons name="cash-outline" size={24} color="#9C27B0" />}
-          </View>
-          <View style={styles.paymentInfo}>
-            <Text style={styles.paymentName}>
-              {method === 'bank_transfer' && 'Transfer Bank'}
-              {method === 'e_wallet' && 'E-Wallet'}
-              {method === 'credit_card' && 'Kartu Kredit'}
-              {method === 'cash' && 'Bayar di Tempat'}
-            </Text>
-            <Text style={styles.paymentDesc}>
-              {method === 'bank_transfer' && 'BCA, Mandiri, BRI, BNI'}
-              {method === 'e_wallet' && 'GoPay, OVO, DANA, ShopeePay'}
-              {method === 'credit_card' && 'Visa, MasterCard, JCB'}
-              {method === 'cash' && 'Bayar saat naik bus'}
-            </Text>
-          </View>
-          {paymentMethod === method && (
-            <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
-          )}
-        </TouchableOpacity>
-      ))}
     </View>
   );
 
@@ -500,20 +490,19 @@ const BookingScreen = () => {
   if (loading && !processing) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1E88E5" />
+        <ActivityIndicator size="large" color={C.primary} />
         <Text style={styles.loadingText}>Memuat data pemesanan...</Text>
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="#1E88E5" barStyle="light-content" />
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.headerBg} translucent={false} />
       
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#FFF" />
+          <Ionicons name="arrow-back" size={24} color={C.headerText} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Pemesanan Tiket</Text>
         <View style={styles.headerRight} />
@@ -523,41 +512,38 @@ const BookingScreen = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {/* Booking Summary */}
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
           {renderBookingSummary()}
 
-          {/* Passenger Information */}
           <View style={styles.sectionContainer}>
             <Text style={styles.sectionTitle}>Informasi Penumpang</Text>
             
-            {/* Main Passenger */}
             {renderPassengerForm(null, 0, true)}
             
-            {/* Additional Passengers */}
             {passengerInfo.additionalPassengers.map((passenger, index) => 
               renderPassengerForm(passenger, index, false)
             )}
             
-            {/* Add Passenger Button */}
             {passengerInfo.additionalPassengers.length < selectedSeats.length - 1 && (
               <TouchableOpacity 
                 style={styles.addPassengerButton}
                 onPress={handleAddPassenger}
               >
-                <Ionicons name="person-add-outline" size={20} color="#1E88E5" />
+                <Ionicons name="person-add-outline" size={20} color={C.primary} />
                 <Text style={styles.addPassengerText}>Tambah Penumpang</Text>
               </TouchableOpacity>
             )}
 
-            {/* Contact Information */}
             <View style={styles.contactForm}>
               <Text style={styles.contactTitle}>Kontak & Informasi Tambahan</Text>
               
               <TextInput
                 style={[styles.input, validationErrors.email && styles.inputError]}
                 placeholder="Email"
-                placeholderTextColor="#999"
+                placeholderTextColor={C.textMuted}
                 value={formData.email}
                 onChangeText={(text) => handleInputChange('email', text)}
                 keyboardType="email-address"
@@ -570,7 +556,7 @@ const BookingScreen = () => {
               <TextInput
                 style={[styles.input, validationErrors.phone && styles.inputError]}
                 placeholder="Nomor Telepon"
-                placeholderTextColor="#999"
+                placeholderTextColor={C.textMuted}
                 value={formData.phone}
                 onChangeText={(text) => handleInputChange('phone', text)}
                 keyboardType="phone-pad"
@@ -582,7 +568,7 @@ const BookingScreen = () => {
               <TextInput
                 style={styles.input}
                 placeholder="Titik Penjemputan (Opsional)"
-                placeholderTextColor="#999"
+                placeholderTextColor={C.textMuted}
                 value={formData.pickupPoint}
                 onChangeText={(text) => handleInputChange('pickupPoint', text)}
               />
@@ -590,7 +576,7 @@ const BookingScreen = () => {
               <TextInput
                 style={styles.input}
                 placeholder="Titik Penurunan (Opsional)"
-                placeholderTextColor="#999"
+                placeholderTextColor={C.textMuted}
                 value={formData.dropPoint}
                 onChangeText={(text) => handleInputChange('dropPoint', text)}
               />
@@ -598,7 +584,7 @@ const BookingScreen = () => {
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Permintaan Khusus (Opsional)"
-                placeholderTextColor="#999"
+                placeholderTextColor={C.textMuted}
                 value={formData.specialRequests}
                 onChangeText={(text) => handleInputChange('specialRequests', text)}
                 multiline
@@ -608,20 +594,15 @@ const BookingScreen = () => {
             </View>
           </View>
 
-          {/* Payment Method */}
-          {renderPaymentMethod()}
-
-          {/* Price Breakdown */}
           {renderPriceBreakdown()}
 
-          {/* Terms and Conditions */}
           <View style={styles.termsCard}>
             <TouchableOpacity 
               style={styles.termsCheckbox}
               onPress={() => setTermsAccepted(!termsAccepted)}
             >
               <View style={[styles.checkbox, termsAccepted && styles.checkboxChecked]}>
-                {termsAccepted && <Ionicons name="checkmark" size={16} color="#FFF" />}
+                {termsAccepted && <Ionicons name="checkmark" size={14} color={C.white} />}
               </View>
               <Text style={styles.termsText}>
                 Saya setuju dengan syarat dan ketentuan yang berlaku
@@ -636,7 +617,6 @@ const BookingScreen = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Action Buttons */}
           <View style={styles.actionContainer}>
             <TouchableOpacity 
               style={styles.cancelButton}
@@ -652,19 +632,18 @@ const BookingScreen = () => {
               disabled={processing || !selectedBus || selectedSeats.length === 0}
             >
               {processing ? (
-                <ActivityIndicator color="#FFF" />
+                <ActivityIndicator color={C.white} />
               ) : (
                 <>
                   <Text style={styles.payButtonText}>Lanjut ke Pembayaran</Text>
-                  <Ionicons name="arrow-forward" size={20} color="#FFF" />
+                  <Ionicons name="arrow-forward" size={20} color={C.white} />
                 </>
               )}
             </TouchableOpacity>
           </View>
 
-          {/* Footer Note */}
           <View style={styles.footerNote}>
-            <Ionicons name="shield-checkmark-outline" size={16} color="#4CAF50" />
+            <Ionicons name="shield-checkmark-outline" size={16} color={C.green} />
             <Text style={styles.footerText}>
               Data Anda aman dan terlindungi. Kami tidak akan membagikan informasi pribadi Anda.
             </Text>
@@ -672,7 +651,6 @@ const BookingScreen = () => {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Payment Modal */}
       <Modal
         visible={showPaymentModal}
         animationType="slide"
@@ -687,7 +665,7 @@ const BookingScreen = () => {
                 onPress={() => setShowPaymentModal(false)}
                 disabled={processing}
               >
-                <Ionicons name="close" size={24} color="#666" />
+                <Ionicons name="close" size={24} color={C.textSub} />
               </TouchableOpacity>
             </View>
             
@@ -701,31 +679,21 @@ const BookingScreen = () => {
               
               <View style={styles.paymentInstruction}>
                 <Text style={styles.instructionTitle}>
-                  {paymentMethod === 'bank_transfer' && 'Transfer ke rekening berikut:'}
-                  {paymentMethod === 'e_wallet' && 'Scan QR code dengan e-wallet:'}
-                  {paymentMethod === 'credit_card' && 'Masukkan detail kartu kredit:'}
-                  {paymentMethod === 'cash' && 'Bayar langsung kepada sopir:'}
+                  Silakan lanjutkan ke halaman pembayaran untuk memilih metode pembayaran
                 </Text>
-                
-                {paymentMethod === 'bank_transfer' && (
-                  <View style={styles.bankInfo}>
-                    <Text style={styles.bankName}>Bank Central Asia (BCA)</Text>
-                    <Text style={styles.accountNumber}>1234567890 - PT Bus Ticketing</Text>
-                  </View>
-                )}
               </View>
               
               <TouchableOpacity 
                 style={styles.confirmButton}
-                onPress={handlePayment}
+                onPress={handleGoToPayment}
                 disabled={processing}
               >
                 {processing ? (
-                  <ActivityIndicator color="#FFF" />
+                  <ActivityIndicator color={C.white} />
                 ) : (
                   <>
-                    <Text style={styles.confirmButtonText}>Konfirmasi Pembayaran</Text>
-                    <Ionicons name="checkmark-circle" size={20} color="#FFF" />
+                    <Text style={styles.confirmButtonText}>Lanjut ke Pembayaran</Text>
+                    <Ionicons name="arrow-forward" size={20} color={C.white} />
                   </>
                 )}
               </TouchableOpacity>
@@ -738,18 +706,17 @@ const BookingScreen = () => {
         </View>
       </Modal>
 
-      {/* Success Overlay */}
       {bookingSuccess && (
         <View style={styles.successOverlay}>
           <View style={styles.successContainer}>
             <View style={styles.successIcon}>
-              <Ionicons name="checkmark-circle" size={80} color="#4CAF50" />
+              <Ionicons name="checkmark-circle" size={80} color={C.green} />
             </View>
             <Text style={styles.successTitle}>Pemesanan Berhasil!</Text>
             <Text style={styles.successMessage}>
               Anda akan diarahkan ke halaman pembayaran.
             </Text>
-            <ActivityIndicator size="large" color="#4CAF50" style={styles.successSpinner} />
+            <ActivityIndicator size="large" color={C.green} style={styles.successSpinner} />
           </View>
         </View>
       )}
@@ -758,52 +725,59 @@ const BookingScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: C.headerBg,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: C.surface,
   },
   loadingText: {
     marginTop: 10,
-    color: '#666',
-    fontSize: 16,
+    color: C.textSub,
+    fontSize: 15,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1E88E5',
+    backgroundColor: C.headerBg,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   backButton: {
     padding: 4,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#FFF',
+    fontWeight: '700',
+    color: C.headerText,
   },
   headerRight: {
     width: 32,
   },
   keyboardView: {
     flex: 1,
+    backgroundColor: C.surface,
   },
+  scrollContent: {
+    paddingBottom: 24,
+  },
+  
+  // Summary Card
   summaryCard: {
-    backgroundColor: '#FFF',
-    margin: 16,
-    borderRadius: 12,
+    backgroundColor: C.white,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 16,
     padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
   },
   summaryHeader: {
@@ -814,89 +788,114 @@ const styles = StyleSheet.create({
   },
   summaryTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: C.text,
+  },
+  bookingIdBadge: {
+    backgroundColor: C.surfaceAlt,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   bookingId: {
-    fontSize: 12,
-    color: '#666',
-    backgroundColor: '#F0F0F0',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    fontSize: 11,
+    color: C.textSub,
+    fontWeight: '500',
   },
   routeSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 16,
   },
   routeStop: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
   },
   routeDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#1E88E5',
+    backgroundColor: C.primary,
     marginRight: 12,
   },
   dotDestination: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: C.green,
   },
   cityText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
+    fontSize: 15,
+    fontWeight: '600',
+    color: C.text,
   },
   timeText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: C.textSub,
     marginTop: 2,
   },
   routeDuration: {
-    flexDirection: 'row',
+    flex: 1,
     alignItems: 'center',
-    marginLeft: 4,
-    marginVertical: 4,
+    paddingHorizontal: 8,
   },
   durationLine: {
-    width: 2,
+    width: 1,
     height: 30,
-    backgroundColor: '#1E88E5',
-    marginLeft: 4,
-    marginRight: 16,
+    backgroundColor: C.border,
+    marginBottom: 4,
+  },
+  durationBadge: {
+    backgroundColor: C.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   durationText: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 10,
+    color: C.primary,
+    fontWeight: '600',
   },
   detailsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    backgroundColor: C.surface,
+    borderRadius: 12,
+    padding: 12,
     marginBottom: 12,
   },
   detailItem: {
     width: '50%',
-    marginBottom: 12,
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  detailIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: C.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
   },
   detailLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
+    fontSize: 10,
+    color: C.textMuted,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   detailValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
+    fontSize: 13,
+    fontWeight: '600',
+    color: C.text,
     marginTop: 2,
   },
   seatsContainer: {
-    marginTop: 8,
+    marginTop: 4,
   },
   seatsTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
+    fontSize: 13,
+    fontWeight: '600',
+    color: C.text,
     marginBottom: 8,
   },
   seatsList: {
@@ -904,72 +903,83 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   seatBadge: {
-    backgroundColor: '#E3F2FD',
-    paddingHorizontal: 12,
+    backgroundColor: C.primaryLight,
+    paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: 8,
     marginRight: 8,
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: C.primaryMuted,
   },
   seatText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#1E88E5',
+    fontSize: 13,
+    fontWeight: '600',
+    color: C.primary,
   },
+  
+  // Section Container
   sectionContainer: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 12,
+    marginTop: 16,
+    borderRadius: 16,
     padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowRadius: 4,
     elevation: 2,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: C.text,
     marginBottom: 16,
   },
+  
+  // Passenger Form
   passengerForm: {
     marginBottom: 16,
   },
+  passengerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
   passengerTitle: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 8,
+    fontWeight: '600',
+    color: C.text,
   },
   removePassengerButton: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   removePassengerText: {
-    color: '#F44336',
+    color: C.red,
     fontSize: 12,
     fontWeight: '500',
+    marginLeft: 4,
   },
   input: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: C.surface,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderColor: C.border,
+    borderRadius: 10,
+    paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 14,
-    color: '#333',
+    color: C.text,
     marginBottom: 12,
   },
   inputError: {
-    borderColor: '#F44336',
-    backgroundColor: '#FFF8F8',
+    borderColor: C.red,
+    backgroundColor: C.redLight,
   },
   errorText: {
-    color: '#F44336',
+    color: C.red,
     fontSize: 12,
     marginTop: -8,
     marginBottom: 12,
@@ -984,10 +994,10 @@ const styles = StyleSheet.create({
   },
   identityTypeButton: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: C.surface,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
+    borderColor: C.border,
+    borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 12,
     flexDirection: 'row',
@@ -996,81 +1006,56 @@ const styles = StyleSheet.create({
   },
   identityTypeText: {
     fontSize: 14,
-    color: '#333',
+    color: C.text,
   },
   addPassengerButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E3F2FD',
+    backgroundColor: C.primaryLight,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: C.primaryMuted,
+    borderStyle: 'dashed',
   },
   addPassengerText: {
-    color: '#1E88E5',
+    color: C.primary,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     marginLeft: 8,
   },
   contactForm: {
-    marginTop: 8,
+    marginTop: 4,
   },
   contactTitle: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
+    fontWeight: '600',
+    color: C.text,
     marginBottom: 12,
   },
   textArea: {
     minHeight: 80,
   },
-  paymentOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  paymentOptionSelected: {
-    borderColor: '#1E88E5',
-    backgroundColor: '#E3F2FD',
-  },
-  paymentIcon: {
-    marginRight: 12,
-  },
-  paymentInfo: {
-    flex: 1,
-  },
-  paymentName: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-  },
-  paymentDesc: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-  },
+  
+  // Price Card
   priceCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 12,
+    marginTop: 16,
+    borderRadius: 16,
     padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   priceTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: C.text,
     marginBottom: 12,
   },
   priceRow: {
@@ -1080,16 +1065,16 @@ const styles = StyleSheet.create({
   },
   priceLabel: {
     fontSize: 14,
-    color: '#666',
+    color: C.textSub,
   },
   priceValue: {
     fontSize: 14,
-    color: '#333',
+    color: C.text,
     fontWeight: '500',
   },
   divider: {
     height: 1,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: C.border,
     marginVertical: 12,
   },
   totalRow: {
@@ -1099,24 +1084,26 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: C.text,
   },
   totalValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1E88E5',
+    color: C.primary,
   },
+  
+  // Terms
   termsCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 12,
+    marginTop: 16,
+    borderRadius: 16,
     padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowRadius: 4,
     elevation: 2,
   },
   termsCheckbox: {
@@ -1127,90 +1114,101 @@ const styles = StyleSheet.create({
   checkbox: {
     width: 20,
     height: 20,
-    borderRadius: 4,
+    borderRadius: 5,
     borderWidth: 2,
-    borderColor: '#1E88E5',
+    borderColor: C.primary,
     marginRight: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#1E88E5',
+    backgroundColor: C.primary,
   },
   termsText: {
-    fontSize: 14,
-    color: '#333',
+    fontSize: 13,
+    color: C.text,
     flex: 1,
   },
   termsLink: {
     alignSelf: 'flex-start',
   },
   termsLinkText: {
-    color: '#1E88E5',
-    fontSize: 14,
-    fontWeight: '500',
+    color: C.primary,
+    fontSize: 13,
+    fontWeight: '600',
   },
+  
+  // Action Buttons
   actionContainer: {
     flexDirection: 'row',
     marginHorizontal: 16,
-    marginBottom: 16,
+    marginTop: 16,
     gap: 12,
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
+    borderColor: C.border,
+    borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
   },
   cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#666',
+    fontSize: 15,
+    fontWeight: '600',
+    color: C.textSub,
   },
   payButton: {
     flex: 2,
-    backgroundColor: '#1E88E5',
-    borderRadius: 8,
+    backgroundColor: C.primary,
+    borderRadius: 12,
     paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: C.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   payButtonDisabled: {
-    backgroundColor: '#90CAF9',
+    backgroundColor: C.primaryMuted,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   payButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '700',
+    color: C.white,
     marginRight: 8,
   },
   footerNote: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     marginHorizontal: 16,
-    marginBottom: 24,
+    marginTop: 16,
+    marginBottom: 8,
     padding: 12,
-    backgroundColor: '#F0F7FF',
-    borderRadius: 8,
+    backgroundColor: C.greenLight,
+    borderRadius: 10,
   },
   footerText: {
     fontSize: 12,
-    color: '#1E88E5',
+    color: C.green,
     marginLeft: 8,
     flex: 1,
   },
+  
+  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   modalContainer: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: Platform.OS === 'ios' ? 34 : 16,
@@ -1221,12 +1219,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: C.border,
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: C.text,
   },
   modalContent: {
     padding: 16,
@@ -1237,61 +1235,55 @@ const styles = StyleSheet.create({
   },
   amountLabel: {
     fontSize: 14,
-    color: '#666',
+    color: C.textSub,
   },
   amountValue: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1E88E5',
+    color: C.primary,
     marginTop: 4,
   },
   paymentInstruction: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
+    backgroundColor: C.surface,
+    borderRadius: 10,
     padding: 16,
     marginBottom: 24,
   },
   instructionTitle: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#333',
-    marginBottom: 8,
-  },
-  bankInfo: {
-    marginTop: 8,
-  },
-  bankName: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-  },
-  accountNumber: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1E88E5',
-    marginTop: 4,
+    color: C.textSub,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   confirmButton: {
-    backgroundColor: '#4CAF50',
-    borderRadius: 8,
+    backgroundColor: C.primary,
+    borderRadius: 12,
     paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: C.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   confirmButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFF',
+    fontWeight: '700',
+    color: C.white,
     marginRight: 8,
   },
   modalNote: {
     fontSize: 12,
-    color: '#666',
+    color: C.textSub,
     textAlign: 'center',
     marginTop: 12,
     lineHeight: 16,
   },
+  
+  // Success
   successOverlay: {
     position: 'absolute',
     top: 0,
@@ -1312,12 +1304,12 @@ const styles = StyleSheet.create({
   successTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: C.text,
     marginBottom: 12,
   },
   successMessage: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 15,
+    color: C.textSub,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,

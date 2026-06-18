@@ -38,6 +38,30 @@ import {
   clearCurrentBooking,
 } from '../../store/slices/bookingSlice';
 
+// ─── Color Tokens ─────────────────────────────────────────────────────────────
+const C = {
+  primary: '#2563EB',
+  primaryLight: '#EFF6FF',
+  primaryMuted: '#BFDBFE',
+  bg: '#FFFFFF',
+  surface: '#F8FAFC',
+  surfaceAlt: '#F1F5F9',
+  border: '#E2E8F0',
+  text: '#0F172A',
+  textSub: '#64748B',
+  textMuted: '#94A3B8',
+  green: '#10B981',
+  greenLight: '#ECFDF5',
+  amber: '#F59E0B',
+  amberLight: '#FFFBEB',
+  red: '#EF4444',
+  redLight: '#FEF2F2',
+  white: '#FFFFFF',
+  headerBg: '#1E3A5F',
+  headerText: '#FFFFFF',
+  headerSub: '#93C5FD',
+};
+
 const { width, height } = Dimensions.get('window');
 
 const PaymentScreen = () => {
@@ -55,7 +79,7 @@ const PaymentScreen = () => {
   const [selectedMethod, setSelectedMethod] = useState('bank_transfer');
   const [showQRModal, setShowQRModal] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [countdown, setCountdown] = useState(300); // 5 minutes in seconds
+  const [countdown, setCountdown] = useState(300);
   const [cardDetails, setCardDetails] = useState({
     cardNumber: '',
     cardExpiry: '',
@@ -72,13 +96,11 @@ const PaymentScreen = () => {
   ]);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // Booking data from params or Redux
   const bookingData = route.params?.bookingData || {};
   const totalAmount =
     route.params?.totalAmount || currentBooking.totalAmount || 0;
   const bookingId = route.params?.bookingId || currentBooking.id;
 
-  // Default booking data
   const defaultBookingData = {
     busName: currentBooking.busName || 'Sinar Jaya Executive',
     departure: currentBooking.departure || 'Jakarta',
@@ -92,8 +114,6 @@ const PaymentScreen = () => {
   };
 
   const booking = { ...defaultBookingData, ...bookingData };
-
-  // Recalculate breakdown based on total
   const serviceFee = 5000;
   const tax = (totalAmount - serviceFee) * 0.1;
   const subtotal = totalAmount - serviceFee - tax;
@@ -105,7 +125,7 @@ const PaymentScreen = () => {
       icon: 'university',
       type: FontAwesome5,
       description: 'BCA, Mandiri, BRI, BNI',
-      color: '#4CAF50',
+      color: C.primary,
       popular: true,
     },
     {
@@ -114,17 +134,16 @@ const PaymentScreen = () => {
       icon: 'mobile-alt',
       type: FontAwesome5,
       description: 'GoPay, OVO, DANA, ShopeePay',
-      color: '#FF9800',
+      color: C.amber,
       popular: true,
     },
-
     {
       id: 'cash',
       name: 'Bayar di Tempat',
       icon: 'money-bill-wave',
       type: FontAwesome5,
       description: 'Bayar saat naik bus',
-      color: '#607D8B',
+      color: C.textSub,
       popular: false,
     },
   ];
@@ -154,12 +173,10 @@ const PaymentScreen = () => {
   ];
 
   useEffect(() => {
-    // Set initial payment method from Redux
     if (paymentInfo) {
       setSelectedMethod(paymentInfo);
     }
 
-    // Start countdown timer
     const timer = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
@@ -180,7 +197,6 @@ const PaymentScreen = () => {
       });
     }, 1000);
 
-    // Animation
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 500,
@@ -263,7 +279,6 @@ const PaymentScreen = () => {
     setProcessing(true);
 
     try {
-      // Prepare payment data
       const paymentData = {
         payment_method: selectedMethod,
         amount: totalAmount,
@@ -275,7 +290,6 @@ const PaymentScreen = () => {
         }),
       };
 
-      // Simulate API call using real thunk
       const res = await dispatch(
         processPayment({
           bookingId: bookingId,
@@ -302,7 +316,6 @@ const PaymentScreen = () => {
         await handlePaymentSuccess();
       }
     } catch (error) {
-      setProcessing(true); // Keep processing state while showing alert if you want, or set to false
       setProcessing(false);
       Alert.alert('Error', error || 'Pembayaran gagal. Silakan coba lagi.');
     }
@@ -312,7 +325,6 @@ const PaymentScreen = () => {
     setProcessing(true);
 
     try {
-      // Prepare payment data for cash (Backend might expect something)
       const paymentData = {
         payment_method: 'cash',
         amount: totalAmount,
@@ -391,7 +403,7 @@ const PaymentScreen = () => {
         ]}
       >
         {step.completed ? (
-          <Ionicons name="checkmark" size={20} color="#FFF" />
+          <Ionicons name="checkmark" size={16} color={C.white} />
         ) : (
           <Text
             style={[styles.stepNumber, step.active && styles.stepNumberActive]}
@@ -430,7 +442,7 @@ const PaymentScreen = () => {
               { backgroundColor: `${method.color}20` },
             ]}
           >
-            <IconComponent name={method.icon} size={24} color={method.color} />
+            <IconComponent name={method.icon} size={22} color={method.color} />
           </View>
           <View style={styles.methodInfo}>
             <Text style={styles.methodName}>{method.name}</Text>
@@ -444,7 +456,9 @@ const PaymentScreen = () => {
             </View>
           )}
           {selectedMethod === method.id && (
-            <Ionicons name="checkmark-circle" size={24} color={method.color} />
+            <View style={styles.checkmarkCircle}>
+              <Ionicons name="checkmark" size={14} color={C.white} />
+            </View>
           )}
         </View>
       </TouchableOpacity>
@@ -462,13 +476,13 @@ const PaymentScreen = () => {
                 key={bank.id}
                 style={[
                   styles.bankCard,
-                  selectedBank === bank.id && styles.paymentMethodSelected,
+                  selectedBank === bank.id && styles.bankCardSelected,
                 ]}
                 onPress={() => setSelectedBank(bank.id)}
               >
                 <View style={styles.bankHeader}>
                   <View
-                    style={[styles.bankLogo, { backgroundColor: '#4CAF50' }]}
+                    style={[styles.bankLogo, { backgroundColor: C.primary }]}
                   >
                     <Text style={styles.bankInitials}>
                       {bank.name.substring(0, 2)}
@@ -477,16 +491,14 @@ const PaymentScreen = () => {
                   <View style={styles.bankInfo}>
                     <Text style={styles.bankName}>{bank.name}</Text>
                     <Text style={styles.bankCode}>
-                      Proses Cepat via Virtual Account Midtrans
+                      Proses Cepat via Virtual Account
                     </Text>
                   </View>
                   <View>
                     {selectedBank === bank.id && (
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={24}
-                        color="#1E88E5"
-                      />
+                      <View style={styles.checkmarkCircle}>
+                        <Ionicons name="checkmark" size={14} color={C.white} />
+                      </View>
                     )}
                   </View>
                 </View>
@@ -503,7 +515,7 @@ const PaymentScreen = () => {
             <TextInput
               style={styles.cardInput}
               placeholder="Nomor Kartu"
-              placeholderTextColor="#999"
+              placeholderTextColor={C.textMuted}
               value={cardDetails.cardNumber}
               onChangeText={text =>
                 setCardDetails({ ...cardDetails, cardNumber: text })
@@ -516,7 +528,7 @@ const PaymentScreen = () => {
               <TextInput
                 style={[styles.cardInput, { flex: 2 }]}
                 placeholder="MM/YY"
-                placeholderTextColor="#999"
+                placeholderTextColor={C.textMuted}
                 value={cardDetails.cardExpiry}
                 onChangeText={text =>
                   setCardDetails({ ...cardDetails, cardExpiry: text })
@@ -526,7 +538,7 @@ const PaymentScreen = () => {
               <TextInput
                 style={[styles.cardInput, { flex: 1, marginLeft: 8 }]}
                 placeholder="CVC"
-                placeholderTextColor="#999"
+                placeholderTextColor={C.textMuted}
                 value={cardDetails.cardCVC}
                 onChangeText={text =>
                   setCardDetails({ ...cardDetails, cardCVC: text })
@@ -539,7 +551,7 @@ const PaymentScreen = () => {
             <TextInput
               style={styles.cardInput}
               placeholder="Nama Pemegang Kartu"
-              placeholderTextColor="#999"
+              placeholderTextColor={C.textMuted}
               value={cardDetails.cardName}
               onChangeText={text =>
                 setCardDetails({ ...cardDetails, cardName: text })
@@ -548,7 +560,7 @@ const PaymentScreen = () => {
             />
 
             <View style={styles.securityNote}>
-              <Ionicons name="lock-closed" size={16} color="#4CAF50" />
+              <Ionicons name="lock-closed" size={14} color={C.green} />
               <Text style={styles.securityText}>
                 Informasi kartu Anda aman dan terenkripsi
               </Text>
@@ -580,15 +592,19 @@ const PaymentScreen = () => {
   if (loading && !processing) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1E88E5" />
+        <ActivityIndicator size="large" color={C.primary} />
         <Text style={styles.loadingText}>Menyiapkan pembayaran...</Text>
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="#1E88E5" barStyle="light-content" />
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={C.headerBg}
+        translucent={false}
+      />
 
       {/* Header */}
       <View style={styles.header}>
@@ -596,21 +612,27 @@ const PaymentScreen = () => {
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
-          <Ionicons name="arrow-back" size={24} color="#FFF" />
+          <Ionicons name="arrow-back" size={24} color={C.headerText} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Pembayaran</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.helpButton}>
-            <Ionicons name="help-circle-outline" size={24} color="#FFF" />
+            <Ionicons
+              name="help-circle-outline"
+              size={24}
+              color={C.headerText}
+            />
           </TouchableOpacity>
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Timer & Booking ID */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         <View style={styles.timerContainer}>
           <View style={styles.timerCard}>
-            <Ionicons name="time-outline" size={24} color="#FF9800" />
+            <Ionicons name="time-outline" size={22} color={C.amber} />
             <View style={styles.timerInfo}>
               <Text style={styles.timerLabel}>Selesaikan dalam</Text>
               <Text style={styles.timerValue}>{formatTime(countdown)}</Text>
@@ -622,12 +644,10 @@ const PaymentScreen = () => {
           </View>
         </View>
 
-        {/* Payment Steps */}
         <View style={styles.stepsContainer}>
           {paymentSteps.map(renderPaymentStep)}
         </View>
 
-        {/* Order Summary */}
         <View style={styles.summaryCard}>
           <Text style={styles.summaryTitle}>Ringkasan Pemesanan</Text>
           <View style={styles.summaryRow}>
@@ -662,16 +682,13 @@ const PaymentScreen = () => {
           )}
         </View>
 
-        {/* Payment Methods */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Pilih Metode Pembayaran</Text>
           {paymentMethods.map(renderPaymentMethod)}
         </View>
 
-        {/* Payment Instructions */}
         {renderInstruction()}
 
-        {/* Price Breakdown */}
         <View style={styles.priceCard}>
           <Text style={styles.priceTitle}>Rincian Pembayaran</Text>
           <View style={styles.priceRow}>
@@ -701,10 +718,9 @@ const PaymentScreen = () => {
           </View>
         </View>
 
-        {/* Security Note */}
         <View style={styles.securityCard}>
           <View style={styles.securityHeader}>
-            <Ionicons name="shield-checkmark" size={20} color="#4CAF50" />
+            <Ionicons name="shield-checkmark" size={18} color={C.green} />
             <Text style={styles.securityTitle}>Pembayaran 100% Aman</Text>
           </View>
           <Text style={styles.securityTextFull}>
@@ -714,7 +730,6 @@ const PaymentScreen = () => {
           </Text>
         </View>
 
-        {/* Action Button */}
         <View style={styles.actionContainer}>
           <TouchableOpacity
             style={[styles.payButton, processing && styles.payButtonDisabled]}
@@ -722,7 +737,7 @@ const PaymentScreen = () => {
             disabled={processing}
           >
             {processing ? (
-              <ActivityIndicator color="#FFF" />
+              <ActivityIndicator color={C.white} />
             ) : (
               <>
                 <Text style={styles.payButtonText}>
@@ -730,8 +745,8 @@ const PaymentScreen = () => {
                 </Text>
                 <Ionicons
                   name="lock-closed"
-                  size={20}
-                  color="#FFF"
+                  size={18}
+                  color={C.white}
                   style={styles.lockIcon}
                 />
               </>
@@ -746,7 +761,6 @@ const PaymentScreen = () => {
         </View>
       </ScrollView>
 
-      {/* QR Code Modal */}
       <Modal
         visible={showQRModal}
         animationType="slide"
@@ -761,7 +775,7 @@ const PaymentScreen = () => {
                 onPress={() => setShowQRModal(false)}
                 disabled={processing}
               >
-                <Ionicons name="close" size={24} color="#666" />
+                <Ionicons name="close" size={24} color={C.textSub} />
               </TouchableOpacity>
             </View>
             <View style={styles.modalContent}>
@@ -777,7 +791,7 @@ const PaymentScreen = () => {
                 Buka aplikasi e-wallet Anda dan scan QR code di atas
               </Text>
               <View style={styles.timerModal}>
-                <Ionicons name="time-outline" size={20} color="#FF9800" />
+                <Ionicons name="time-outline" size={18} color={C.amber} />
                 <Text style={styles.timerModalText}>
                   Berlaku selama {formatTime(countdown)}
                 </Text>
@@ -797,44 +811,23 @@ const PaymentScreen = () => {
         </View>
       </Modal>
 
-      {/* VA Overlay */}
       {showVAModal && (
         <View style={styles.successOverlay}>
           <Animated.View
             style={[styles.successContainer, { opacity: fadeAnim }]}
           >
             <View style={styles.successIcon}>
-              <Ionicons name="card" size={80} color="#1E88E5" />
+              <Ionicons name="card" size={64} color={C.primary} />
             </View>
             <Text style={styles.successTitle}>Menunggu Pembayaran</Text>
             <Text style={styles.successMessage}>
               Silakan selesaikan pembayaran ke Virtual Account berikut:
             </Text>
 
-            <View
-              style={[styles.bankCard, { width: '100%', marginBottom: 20 }]}
-            >
-              <Text
-                style={{ textAlign: 'center', color: '#666', marginBottom: 8 }}
-              >
-                Nomor Virtual Account
-              </Text>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Text
-                  style={{
-                    textAlign: 'center',
-                    fontSize: 24,
-                    fontWeight: 'bold',
-                    color: '#333',
-                    marginRight: 10,
-                  }}
-                >
+            <View style={[styles.bankCard, styles.vaCard]}>
+              <Text style={styles.vaLabel}>Nomor Virtual Account</Text>
+              <View style={styles.vaRow}>
+                <Text style={styles.vaNumber}>
                   {currentBooking?.midtrans?.va_numbers?.[0]?.va_number || '-'}
                 </Text>
                 <TouchableOpacity
@@ -845,17 +838,10 @@ const PaymentScreen = () => {
                     )
                   }
                 >
-                  <Ionicons name="copy-outline" size={24} color="#1E88E5" />
+                  <Ionicons name="copy-outline" size={22} color={C.primary} />
                 </TouchableOpacity>
               </View>
-              <Text
-                style={{
-                  textAlign: 'center',
-                  color: '#1E88E5',
-                  marginTop: 8,
-                  fontWeight: '500',
-                }}
-              >
+              <Text style={styles.vaBank}>
                 Bank{' '}
                 {currentBooking?.midtrans?.va_numbers?.[0]?.bank?.toUpperCase() ||
                   '-'}
@@ -869,7 +855,7 @@ const PaymentScreen = () => {
                 disabled={processing}
               >
                 {processing ? (
-                  <ActivityIndicator color="#FFF" />
+                  <ActivityIndicator color={C.white} />
                 ) : (
                   <Text style={styles.viewTicketText}>
                     Cek Status Pembayaran
@@ -901,7 +887,7 @@ const PaymentScreen = () => {
             style={[styles.successContainer, { opacity: fadeAnim }]}
           >
             <View style={styles.successIcon}>
-              <FontAwesome5 name="qrcode" size={64} color="#FF9800" />
+              <FontAwesome5 name="qrcode" size={64} color={C.amber} />
             </View>
             <Text style={styles.successTitle}>Selesaikan Pembayaran</Text>
             <Text style={styles.successMessage}>
@@ -919,7 +905,7 @@ const PaymentScreen = () => {
               </View>
             ) : (
               <View style={styles.qrImageWrapper}>
-                <ActivityIndicator size="large" color="#FF9800" />
+                <ActivityIndicator size="large" color={C.amber} />
                 <Text style={styles.qrSubtext}>Menyiapkan QR code...</Text>
               </View>
             )}
@@ -929,7 +915,7 @@ const PaymentScreen = () => {
             </Text>
 
             <View style={styles.timerModal}>
-              <Ionicons name="time-outline" size={20} color="#FF9800" />
+              <Ionicons name="time-outline" size={20} color={C.amber} />
               <Text style={styles.timerModalText}>
                 Berlaku selama {formatTime(countdown)}
               </Text>
@@ -940,7 +926,7 @@ const PaymentScreen = () => {
                 <TouchableOpacity
                   style={[
                     styles.viewTicketButton,
-                    { backgroundColor: '#FF9800' },
+                    { backgroundColor: C.amber },
                   ]}
                   onPress={() => Linking.openURL(currentBooking.deeplink_url)}
                   disabled={processing}
@@ -957,7 +943,7 @@ const PaymentScreen = () => {
                 disabled={processing}
               >
                 {processing ? (
-                  <ActivityIndicator color="#FFF" />
+                  <ActivityIndicator color={C.white} />
                 ) : (
                   <Text style={styles.viewTicketText}>
                     Cek Status Pembayaran
@@ -989,7 +975,7 @@ const PaymentScreen = () => {
             style={[styles.successContainer, { opacity: fadeAnim }]}
           >
             <View style={styles.successIcon}>
-              <Ionicons name="checkmark-circle" size={80} color="#4CAF50" />
+              <Ionicons name="checkmark-circle" size={64} color={C.green} />
             </View>
             <Text style={styles.successTitle}>Pembayaran Berhasil!</Text>
             <Text style={styles.successMessage}>
@@ -1038,36 +1024,36 @@ const PaymentScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: C.headerBg,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: C.surface,
   },
   loadingText: {
     marginTop: 10,
-    color: '#666',
-    fontSize: 16,
+    color: C.textSub,
+    fontSize: 15,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1E88E5',
+    backgroundColor: C.headerBg,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   backButton: {
     padding: 4,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#FFF',
+    fontWeight: '700',
+    color: C.headerText,
   },
   headerRight: {
     flexDirection: 'row',
@@ -1075,111 +1061,123 @@ const styles = StyleSheet.create({
   helpButton: {
     padding: 4,
   },
+  scrollContent: {
+    paddingBottom: 24,
+    backgroundColor: C.surface,
+  },
   timerContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingTop: 16,
+    gap: 8,
   },
   timerCard: {
     flex: 1,
-    backgroundColor: '#FFF3E0',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: C.amberLight,
+    borderRadius: 12,
+    padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 8,
   },
   timerInfo: {
     marginLeft: 12,
   },
   timerLabel: {
-    fontSize: 12,
-    color: '#FF9800',
+    fontSize: 11,
+    color: C.amber,
+    fontWeight: '500',
   },
   timerValue: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#FF9800',
-    marginTop: 2,
+    color: C.amber,
+    marginTop: 1,
   },
   bookingIdCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: C.white,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   bookingIdLabel: {
     fontSize: 10,
-    color: '#666',
+    color: C.textSub,
+    fontWeight: '500',
   },
   bookingIdValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 2,
+    fontSize: 13,
+    fontWeight: '700',
+    color: C.text,
+    marginTop: 1,
   },
   stepsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 24,
+    paddingVertical: 20,
   },
   stepContainer: {
     alignItems: 'center',
     flex: 1,
   },
   stepCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E0E0E0',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: C.surfaceAlt,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   stepCircleCompleted: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: C.green,
   },
   stepCircleActive: {
-    backgroundColor: '#1E88E5',
+    backgroundColor: C.primary,
   },
   stepNumber: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: C.textSub,
   },
   stepNumberActive: {
-    color: '#FFF',
+    color: C.white,
   },
   stepTitle: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 11,
+    color: C.textSub,
     textAlign: 'center',
   },
   stepTitleActive: {
-    color: '#1E88E5',
+    color: C.primary,
     fontWeight: '600',
   },
   stepTitleCompleted: {
-    color: '#4CAF50',
+    color: C.green,
   },
   summaryCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     marginHorizontal: 16,
     marginBottom: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
   },
   summaryTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: C.text,
     marginBottom: 12,
   },
   summaryRow: {
@@ -1188,46 +1186,46 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   summaryLabel: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: C.textSub,
   },
   summaryValue: {
-    fontSize: 14,
-    color: '#333',
+    fontSize: 13,
+    color: C.text,
     fontWeight: '500',
   },
   section: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     marginHorizontal: 16,
     marginBottom: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowRadius: 4,
     elevation: 2,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: C.text,
     marginBottom: 12,
   },
   paymentMethodCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
+    backgroundColor: C.surface,
+    borderRadius: 10,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: C.border,
   },
   paymentMethodSelected: {
-    borderColor: '#1E88E5',
-    backgroundColor: '#E3F2FD',
+    borderColor: C.primary,
+    backgroundColor: C.primaryLight,
   },
   methodLeft: {
     flexDirection: 'row',
@@ -1235,9 +1233,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   methodIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -1247,63 +1245,76 @@ const styles = StyleSheet.create({
   },
   methodName: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
+    fontWeight: '600',
+    color: C.text,
   },
   methodDescription: {
     fontSize: 12,
-    color: '#666',
-    marginTop: 2,
+    color: C.textSub,
+    marginTop: 1,
   },
   methodRight: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   popularBadge: {
-    backgroundColor: '#FF9800',
+    backgroundColor: C.amber,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
     marginRight: 8,
   },
   popularText: {
-    fontSize: 10,
-    color: '#FFF',
+    fontSize: 9,
+    color: C.white,
     fontWeight: 'bold',
   },
+  checkmarkCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: C.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   instructionCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     marginHorizontal: 16,
     marginBottom: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowRadius: 4,
     elevation: 2,
   },
   instructionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#333',
+    color: C.text,
     marginBottom: 12,
   },
   instructionText: {
     fontSize: 14,
-    color: '#666',
+    color: C.textSub,
     lineHeight: 20,
   },
   bankCard: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
+    backgroundColor: C.surface,
+    borderRadius: 10,
     padding: 12,
-    marginBottom: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  bankCardSelected: {
+    borderColor: C.primary,
+    backgroundColor: C.primaryLight,
   },
   bankHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
   },
   bankLogo: {
     width: 40,
@@ -1314,9 +1325,9 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   bankInitials: {
-    color: '#FFF',
+    color: C.white,
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
   },
   bankInfo: {
     flex: 1,
@@ -1324,45 +1335,22 @@ const styles = StyleSheet.create({
   bankName: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#333',
+    color: C.text,
   },
   bankCode: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-  },
-  accountDetails: {
-    backgroundColor: '#FFF',
-    borderRadius: 6,
-    padding: 12,
-  },
-  accountRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  accountLabel: {
-    fontSize: 14,
-    color: '#666',
-  },
-  accountValue: {
-    fontSize: 14,
-    color: '#333',
-    fontWeight: '500',
-  },
-  amountHighlight: {
-    color: '#1E88E5',
-    fontWeight: 'bold',
+    fontSize: 11,
+    color: C.textSub,
+    marginTop: 1,
   },
   cardInput: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: C.surface,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderColor: C.border,
+    borderRadius: 10,
+    paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 14,
-    color: '#333',
+    color: C.text,
     marginBottom: 12,
   },
   cardRow: {
@@ -1371,49 +1359,49 @@ const styles = StyleSheet.create({
   securityNote: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 4,
   },
   securityText: {
     fontSize: 12,
-    color: '#4CAF50',
+    color: C.green,
     marginLeft: 8,
   },
   priceCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     marginHorizontal: 16,
     marginBottom: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   priceTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: C.text,
     marginBottom: 12,
   },
   priceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   priceLabel: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: C.textSub,
   },
   priceValue: {
-    fontSize: 14,
-    color: '#333',
+    fontSize: 13,
+    color: C.text,
     fontWeight: '500',
   },
   divider: {
     height: 1,
-    backgroundColor: '#E0E0E0',
-    marginVertical: 12,
+    backgroundColor: C.border,
+    marginVertical: 10,
   },
   totalRow: {
     flexDirection: 'row',
@@ -1422,19 +1410,19 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: C.text,
   },
   totalValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1E88E5',
+    color: C.primary,
   },
   securityCard: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: C.greenLight,
     marginHorizontal: 16,
     marginBottom: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
   },
   securityHeader: {
@@ -1445,51 +1433,58 @@ const styles = StyleSheet.create({
   securityTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2E7D32',
+    color: C.green,
     marginLeft: 8,
   },
   securityTextFull: {
     fontSize: 12,
-    color: '#388E3C',
+    color: C.green,
     lineHeight: 18,
-    marginLeft: 28,
+    marginLeft: 26,
   },
   actionContainer: {
     paddingHorizontal: 16,
-    marginBottom: 24,
+    paddingBottom: 8,
   },
   payButton: {
-    backgroundColor: '#1E88E5',
-    borderRadius: 8,
+    backgroundColor: C.primary,
+    borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     marginBottom: 12,
+    shadowColor: C.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   payButtonDisabled: {
-    backgroundColor: '#90CAF9',
+    backgroundColor: C.primaryMuted,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   payButtonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
+    color: C.white,
+    fontSize: 15,
+    fontWeight: '700',
   },
   lockIcon: {
     marginLeft: 8,
   },
   saveButton: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    paddingVertical: 16,
+    borderColor: C.border,
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: 'center',
   },
   saveButtonText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '500',
+    color: C.textSub,
+    fontSize: 15,
+    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
@@ -1497,11 +1492,10 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContainer: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: Platform.OS === 'ios' ? 34 : 16,
-    maxHeight: height * 0.8,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1509,40 +1503,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: C.border,
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: C.text,
   },
   modalContent: {
     padding: 24,
     alignItems: 'center',
   },
   qrContainer: {
-    width: 200,
-    height: 200,
-    backgroundColor: '#F5F5F5',
+    width: 180,
+    height: 180,
+    backgroundColor: C.surface,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: C.border,
   },
   qrPlaceholder: {
     alignItems: 'center',
   },
   qrText: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: C.text,
   },
   qrSubtext: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 8,
+    fontSize: 11,
+    color: C.textSub,
+    marginTop: 6,
   },
   qrImageWrapper: {
     width: 220,
@@ -1570,7 +1564,7 @@ const styles = StyleSheet.create({
   },
   modalInstruction: {
     fontSize: 14,
-    color: '#666',
+    color: C.textSub,
     textAlign: 'center',
     marginBottom: 16,
     lineHeight: 20,
@@ -1578,23 +1572,23 @@ const styles = StyleSheet.create({
   timerModal: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   timerModalText: {
     fontSize: 14,
-    color: '#FF9800',
+    color: C.amber,
     fontWeight: '500',
     marginLeft: 8,
   },
   doneButton: {
-    backgroundColor: '#4CAF50',
-    borderRadius: 8,
+    backgroundColor: C.green,
+    borderRadius: 10,
     paddingHorizontal: 32,
     paddingVertical: 12,
   },
   doneButtonText: {
-    color: '#FFF',
-    fontSize: 16,
+    color: C.white,
+    fontSize: 15,
     fontWeight: '600',
   },
   successOverlay: {
@@ -1610,55 +1604,90 @@ const styles = StyleSheet.create({
   successContainer: {
     alignItems: 'center',
     padding: 32,
+    width: '100%',
   },
   successIcon: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   successTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
+    color: C.text,
+    marginBottom: 8,
   },
   successMessage: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 14,
+    color: C.textSub,
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  vaCard: {
+    width: '100%',
+    backgroundColor: C.surfaceAlt,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  vaLabel: {
+    fontSize: 12,
+    color: C.textSub,
+    textAlign: 'center',
+  },
+  vaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
+    gap: 10,
+  },
+  vaNumber: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: C.text,
+    letterSpacing: 1,
+  },
+  vaBank: {
+    fontSize: 13,
+    color: C.primary,
+    textAlign: 'center',
+    marginTop: 6,
+    fontWeight: '500',
   },
   successActions: {
     width: '100%',
-    gap: 12,
+    gap: 10,
   },
   viewTicketButton: {
-    backgroundColor: '#1E88E5',
+    backgroundColor: C.primary,
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
     width: '100%',
+    shadowColor: C.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   viewTicketText: {
-    color: '#FFF',
-    fontSize: 16,
+    color: C.white,
+    fontSize: 15,
     fontWeight: '600',
   },
   backHomeButton: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: C.border,
     width: '100%',
   },
   backHomeText: {
-    color: '#666',
-    fontSize: 16,
+    color: C.textSub,
+    fontSize: 15,
     fontWeight: '600',
-  },
-  successSpinner: {
-    marginTop: 16,
   },
 });
 

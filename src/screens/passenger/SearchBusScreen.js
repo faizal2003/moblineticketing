@@ -25,15 +25,37 @@ import {
   selectBusError,
 } from '../../store/slices/bookingSlice';
 
+// ─── Color Tokens ─────────────────────────────────────────────────────────────
+const C = {
+  primary: '#2563EB',
+  primaryLight: '#EFF6FF',
+  primaryMuted: '#BFDBFE',
+  bg: '#FFFFFF',
+  surface: '#F8FAFC',
+  surfaceAlt: '#F1F5F9',
+  border: '#E2E8F0',
+  text: '#0F172A',
+  textSub: '#64748B',
+  textMuted: '#94A3B8',
+  green: '#10B981',
+  greenLight: '#ECFDF5',
+  amber: '#F59E0B',
+  amberLight: '#FFFBEB',
+  red: '#EF4444',
+  redLight: '#FEF2F2',
+  white: '#FFFFFF',
+  headerBg: '#1E3A5F',
+  headerText: '#FFFFFF',
+  headerSub: '#93C5FD',
+};
+
 const SearchBusScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   
-  // Get state from Redux
   const searchParams = useSelector(selectSearchParams);
   const loading = useSelector(selectBusLoading);
   const error = useSelector(selectBusError);
   
-  // Local state for form
   const [formData, setFormData] = useState({
     departure: '',
     destination: '',
@@ -46,7 +68,6 @@ const SearchBusScreen = ({ navigation }) => {
   const [isRoundTrip, setIsRoundTrip] = useState(false);
   const [returnDate, setReturnDate] = useState(new Date());
 
-  // Load saved search params on mount
   useEffect(() => {
     if (searchParams.departure) {
       setFormData({
@@ -72,7 +93,6 @@ const SearchBusScreen = ({ navigation }) => {
         ...formData,
         departureDate: selectedDate,
       });
-      // Ensure return date is not before departure date
       if (isRoundTrip && returnDate < selectedDate) {
         setReturnDate(selectedDate);
       }
@@ -117,7 +137,6 @@ const SearchBusScreen = ({ navigation }) => {
   const handleSearch = async () => {
     if (!validateForm()) return;
 
-    // Update search params in Redux
     dispatch(updateSearchParams({
       departure: formData.departure.trim(),
       destination: formData.destination.trim(),
@@ -127,10 +146,8 @@ const SearchBusScreen = ({ navigation }) => {
       tripType: isRoundTrip ? 'round-trip' : 'one-way',
     }));
 
-    // Clear previous results
     dispatch(clearSearchResults());
 
-    // Prepare search parameters
     const searchParams = {
       departure: formData.departure.trim(),
       destination: formData.destination.trim(),
@@ -140,11 +157,9 @@ const SearchBusScreen = ({ navigation }) => {
     };
 
     try {
-      // Fetch available buses
       const result = await dispatch(fetchAvailableBuses(searchParams)).unwrap();
       
       if (result.data && result.data.length > 0) {
-        // Navigate to bus list
         navigation.navigate('BusList');
       } else {
         Alert.alert(
@@ -196,20 +211,23 @@ const SearchBusScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="#1E88E5" barStyle="light-content" />
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.headerBg} translucent={false} />
       
-      {/* Header */}
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={C.headerText} />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Cari Bus</Text>
+        <View style={styles.headerRight} />
       </View>
 
       <ScrollView 
         style={styles.content}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Trip Type Selector */}
         <View style={styles.tripTypeContainer}>
           <TouchableOpacity
             style={[
@@ -242,18 +260,17 @@ const SearchBusScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Location Inputs */}
         <View style={styles.card}>
           <View style={styles.locationRow}>
             <View style={styles.locationIcon}>
-              <Ionicons name="location" size={24} color="#1E88E5" />
+              <Ionicons name="location" size={22} color={C.primary} />
             </View>
             <View style={styles.locationInputContainer}>
               <Text style={styles.inputLabel}>Dari</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Kota keberangkatan"
-                placeholderTextColor="#999"
+                placeholderTextColor={C.textMuted}
                 value={formData.departure}
                 onChangeText={(text) => handleInputChange('departure', text)}
                 autoCapitalize="words"
@@ -262,19 +279,19 @@ const SearchBusScreen = ({ navigation }) => {
           </View>
           
           <TouchableOpacity style={styles.swapButton} onPress={swapLocations}>
-            <Ionicons name="swap-vertical" size={20} color="#666" />
+            <Ionicons name="swap-vertical" size={18} color={C.textSub} />
           </TouchableOpacity>
           
           <View style={styles.locationRow}>
             <View style={styles.locationIcon}>
-              <Ionicons name="location-outline" size={24} color="#4CAF50" />
+              <Ionicons name="location-outline" size={22} color={C.green} />
             </View>
             <View style={styles.locationInputContainer}>
               <Text style={styles.inputLabel}>Ke</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Kota tujuan"
-                placeholderTextColor="#999"
+                placeholderTextColor={C.textMuted}
                 value={formData.destination}
                 onChangeText={(text) => handleInputChange('destination', text)}
                 autoCapitalize="words"
@@ -283,11 +300,10 @@ const SearchBusScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Date Selection */}
         <View style={styles.card}>
           <View style={styles.dateRow}>
             <View style={styles.dateIcon}>
-              <Ionicons name="calendar" size={24} color="#1E88E5" />
+              <Ionicons name="calendar" size={22} color={C.primary} />
             </View>
             <View style={styles.dateInputContainer}>
               <Text style={styles.inputLabel}>Tanggal Berangkat</Text>
@@ -298,7 +314,7 @@ const SearchBusScreen = ({ navigation }) => {
                 <Text style={styles.dateText}>
                   {formatDate(formData.departureDate)}
                 </Text>
-                <Ionicons name="calendar-outline" size={20} color="#666" />
+                <Ionicons name="chevron-down" size={18} color={C.textMuted} />
               </TouchableOpacity>
             </View>
           </View>
@@ -308,7 +324,7 @@ const SearchBusScreen = ({ navigation }) => {
               <View style={styles.divider} />
               <View style={styles.dateRow}>
                 <View style={styles.dateIcon}>
-                  <Ionicons name="calendar" size={24} color="#FF9800" />
+                  <Ionicons name="calendar" size={22} color={C.amber} />
                 </View>
                 <View style={styles.dateInputContainer}>
                   <Text style={styles.inputLabel}>Tanggal Kembali</Text>
@@ -319,7 +335,7 @@ const SearchBusScreen = ({ navigation }) => {
                     <Text style={styles.dateText}>
                       {formatDate(returnDate)}
                     </Text>
-                    <Ionicons name="calendar-outline" size={20} color="#666" />
+                    <Ionicons name="chevron-down" size={18} color={C.textMuted} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -327,11 +343,10 @@ const SearchBusScreen = ({ navigation }) => {
           )}
         </View>
 
-        {/* Passengers Selection */}
         <View style={styles.card}>
           <View style={styles.passengerRow}>
             <View style={styles.passengerIcon}>
-              <Ionicons name="people" size={24} color="#1E88E5" />
+              <Ionicons name="people" size={22} color={C.primary} />
             </View>
             <View style={styles.passengerInputContainer}>
               <Text style={styles.inputLabel}>Penumpang</Text>
@@ -343,8 +358,8 @@ const SearchBusScreen = ({ navigation }) => {
                 >
                   <Ionicons 
                     name="remove" 
-                    size={20} 
-                    color={parseInt(formData.passengers) <= 1 ? '#CCC' : '#333'} 
+                    size={18} 
+                    color={parseInt(formData.passengers) <= 1 ? C.textMuted : C.text} 
                   />
                 </TouchableOpacity>
                 
@@ -357,8 +372,8 @@ const SearchBusScreen = ({ navigation }) => {
                 >
                   <Ionicons 
                     name="add" 
-                    size={20} 
-                    color={parseInt(formData.passengers) >= 10 ? '#CCC' : '#333'} 
+                    size={18} 
+                    color={parseInt(formData.passengers) >= 10 ? C.textMuted : C.text} 
                   />
                 </TouchableOpacity>
               </View>
@@ -366,50 +381,40 @@ const SearchBusScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Recent Searches (Optional) */}
-        <View style={styles.recentSearches}>
-          <Text style={styles.recentTitle}>Pencarian Terakhir</Text>
-          {/* You can map through recent searches from Redux state */}
-        </View>
-
-        {/* Error Display */}
         {error && (
           <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle" size={20} color="#F44336" />
+            <Ionicons name="alert-circle" size={18} color={C.red} />
             <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
 
-        {/* Search Button */}
         <TouchableOpacity
-          style={styles.searchButton}
+          style={[styles.searchButton, loading && styles.searchButtonDisabled]}
           onPress={handleSearch}
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#FFF" />
+            <ActivityIndicator color={C.white} />
           ) : (
             <>
-              <Ionicons name="search" size={20} color="#FFF" />
+              <Ionicons name="search" size={18} color={C.white} />
               <Text style={styles.searchButtonText}>Cari Bus</Text>
             </>
           )}
         </TouchableOpacity>
 
-        {/* Quick Actions */}
         <View style={styles.quickActions}>
           <TouchableOpacity 
             style={styles.quickAction}
             onPress={() => navigation.navigate('MyTickets')}
           >
-            <Ionicons name="ticket" size={24} color="#1E88E5" />
+            <Ionicons name="ticket" size={22} color={C.primary} />
             <Text style={styles.quickActionText}>Tiket Saya</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
             style={styles.quickAction}
             onPress={() => {
-              // Set today's date
               const today = new Date();
               setFormData({
                 ...formData,
@@ -418,13 +423,12 @@ const SearchBusScreen = ({ navigation }) => {
               handleSearch();
             }}
           >
-            <Ionicons name="flash" size={24} color="#FF9800" />
+            <Ionicons name="flash" size={22} color={C.amber} />
             <Text style={styles.quickActionText}>Berangkat Hari Ini</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
 
-      {/* Date Pickers */}
       <DatePicker
         modal
         open={showDatePicker}
@@ -455,31 +459,49 @@ const SearchBusScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: C.headerBg,
   },
   header: {
-    backgroundColor: '#1E88E5',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.headerBg,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
+  },
+  backButton: {
+    padding: 4,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#FFF',
+    fontWeight: '700',
+    color: C.headerText,
+    flex: 1,
     textAlign: 'center',
+  },
+  headerRight: {
+    width: 32,
   },
   content: {
     flex: 1,
+    backgroundColor: C.surface,
+  },
+  scrollContent: {
     padding: 16,
+    paddingBottom: 32,
   },
   tripTypeContainer: {
     flexDirection: 'row',
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 16,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   tripTypeButton: {
     flex: 1,
@@ -487,26 +509,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tripTypeButtonActive: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: C.primaryLight,
   },
   tripTypeText: {
     fontSize: 14,
-    color: '#666',
+    color: C.textSub,
     fontWeight: '500',
   },
   tripTypeTextActive: {
-    color: '#1E88E5',
+    color: C.primary,
     fontWeight: '600',
   },
   card: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
+    backgroundColor: C.white,
+    borderRadius: 14,
     padding: 16,
-    marginBottom: 12,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
   },
   locationRow: {
@@ -515,6 +537,8 @@ const styles = StyleSheet.create({
   },
   locationIcon: {
     marginRight: 12,
+    width: 22,
+    alignItems: 'center',
   },
   locationInputContainer: {
     flex: 1,
@@ -522,24 +546,29 @@ const styles = StyleSheet.create({
   swapButton: {
     alignSelf: 'center',
     marginVertical: 8,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: C.surface,
     width: 32,
     height: 32,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: C.border,
   },
   inputLabel: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 11,
+    color: C.textMuted,
     marginBottom: 4,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   input: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: 15,
+    color: C.text,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: C.border,
   },
   dateRow: {
     flexDirection: 'row',
@@ -547,6 +576,8 @@ const styles = StyleSheet.create({
   },
   dateIcon: {
     marginRight: 12,
+    width: 22,
+    alignItems: 'center',
   },
   dateInputContainer: {
     flex: 1,
@@ -557,17 +588,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: C.border,
   },
   dateText: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: 15,
+    color: C.text,
   },
   divider: {
     height: 1,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: C.border,
     marginVertical: 12,
-    marginLeft: 36,
+    marginLeft: 34,
   },
   passengerRow: {
     flexDirection: 'row',
@@ -575,6 +606,8 @@ const styles = StyleSheet.create({
   },
   passengerIcon: {
     marginRight: 12,
+    width: 22,
+    alignItems: 'center',
   },
   passengerInputContainer: {
     flex: 1,
@@ -584,74 +617,88 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     maxWidth: 120,
+    paddingVertical: 4,
   },
   counterButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F5F5F5',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: C.surface,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: C.border,
   },
   passengerCount: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: C.text,
     minWidth: 40,
     textAlign: 'center',
-  },
-  recentSearches: {
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  recentTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFEBEE',
+    backgroundColor: C.redLight,
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: C.red,
   },
   errorText: {
     marginLeft: 8,
-    fontSize: 14,
-    color: '#F44336',
+    fontSize: 13,
+    color: C.red,
     flex: 1,
   },
   searchButton: {
-    backgroundColor: '#1E88E5',
+    backgroundColor: C.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
     borderRadius: 12,
     marginBottom: 16,
+    shadowColor: C.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  searchButtonDisabled: {
+    backgroundColor: C.primaryMuted,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   searchButtonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
+    color: C.white,
+    fontSize: 15,
+    fontWeight: '700',
     marginLeft: 8,
   },
   quickActions: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginTop: 8,
+    backgroundColor: C.white,
+    borderRadius: 12,
+    paddingVertical: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   quickAction: {
     alignItems: 'center',
-    padding: 12,
+    padding: 10,
   },
   quickActionText: {
     fontSize: 12,
-    color: '#666',
+    color: C.textSub,
     marginTop: 4,
+    fontWeight: '500',
   },
 });
 

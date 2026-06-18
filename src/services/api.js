@@ -7,10 +7,10 @@ const getBaseURL = () => {
     if (Platform.OS === 'android') {
       return 'https://c422-157-15-41-36.ngrok-free.app/api'; // IP komputer Anda
     } else {
-      return 'http://localhost:8000/api'; // untuk iOS simulator
+      return 'http://localhost:8000'; // untuk iOS simulator
     }
   } else {
-    return 'https://api.busticketing.com/api';
+    return 'https://api.busticketing.com';
   }
 };
 

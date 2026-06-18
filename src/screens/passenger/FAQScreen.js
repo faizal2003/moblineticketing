@@ -11,9 +11,29 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 
+// ─── Color Tokens ─────────────────────────────────────────────────────────────
+const C = {
+  primary: '#2563EB',
+  primaryLight: '#EFF6FF',
+  primaryMuted: '#BFDBFE',
+  bg: '#FFFFFF',
+  surface: '#F8FAFC',
+  surfaceAlt: '#F1F5F9',
+  border: '#E2E8F0',
+  text: '#0F172A',
+  textSub: '#64748B',
+  textMuted: '#94A3B8',
+  green: '#10B981',
+  greenLight: '#ECFDF5',
+  white: '#FFFFFF',
+  headerBg: '#1E3A5F',
+  headerText: '#FFFFFF',
+  headerSub: '#93C5FD',
+};
+
 export default function FAQScreen({ navigation }) {
   const handleContactWhatsApp = () => {
-    const phoneNumber = '6281234567890'; // ganti dengan nomor WA admin yang sebenarnya
+    const phoneNumber = '6281234567890';
     const message = 'Halo Admin Bus Ticketing, saya butuh bantuan mengenai tiket saya...';
     const url = `whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(message)}`;
     
@@ -42,33 +62,47 @@ export default function FAQScreen({ navigation }) {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Icon name="arrow-back" size={24} color="#333" />
+          <Icon name="arrow-back" size={24} color={C.headerText} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Bantuan (FAQ)</Text>
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView 
+        style={styles.content}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.faqSection}>
           <Text style={styles.sectionTitle}>Pertanyaan yang Sering Diajukan</Text>
           {faqs.map((faq, index) => (
             <View key={index} style={styles.faqCard}>
-              <Text style={styles.faqQuestion}>{faq.question}</Text>
-              <Text style={styles.faqAnswer}>{faq.answer}</Text>
+              <View style={styles.faqIconWrap}>
+                <Icon name="help-outline" size={20} color={C.primary} />
+              </View>
+              <View style={styles.faqContent}>
+                <Text style={styles.faqQuestion}>{faq.question}</Text>
+                <Text style={styles.faqAnswer}>{faq.answer}</Text>
+              </View>
             </View>
           ))}
         </View>
 
         <View style={styles.contactSection}>
-          <Text style={styles.contactTitle}>Masih butuh bantuan?</Text>
+          <View style={styles.contactHeader}>
+            <View style={styles.contactIconWrap}>
+              <Icon name="support-agent" size={28} color={C.white} />
+            </View>
+            <Text style={styles.contactTitle}>Masih butuh bantuan?</Text>
+          </View>
           <Text style={styles.contactDesc}>
             Tim dukungan kami siap membantu Anda. Hubungi kami melalui WhatsApp untuk respon yang lebih cepat.
           </Text>
           
           <TouchableOpacity style={styles.waButton} onPress={handleContactWhatsApp}>
-            <FontAwesome5 name="whatsapp" size={24} color="#fff" />
+            <FontAwesome5 name="whatsapp" size={22} color={C.white} />
             <Text style={styles.waButtonText}>Hubungi via WhatsApp</Text>
           </TouchableOpacity>
         </View>
@@ -78,80 +112,113 @@ export default function FAQScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: C.headerBg,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    backgroundColor: C.headerBg,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   backButton: {
-    padding: 8,
-    marginRight: 8,
+    padding: 4,
+    marginRight: 12,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 18,
+    fontWeight: '700',
+    color: C.headerText,
   },
   content: {
     flex: 1,
+    backgroundColor: C.surface,
+  },
+  scrollContent: {
+    paddingBottom: 24,
   },
   faqSection: {
     padding: 16,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '700',
+    color: C.text,
     marginBottom: 16,
   },
   faqCard: {
-    backgroundColor: '#fff',
+    flexDirection: 'row',
+    backgroundColor: C.white,
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 14,
     marginBottom: 12,
-    elevation: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  faqIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: C.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  faqContent: {
+    flex: 1,
   },
   faqQuestion: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1E88E5',
-    marginBottom: 8,
+    fontSize: 15,
+    fontWeight: '600',
+    color: C.primary,
+    marginBottom: 6,
   },
   faqAnswer: {
     fontSize: 14,
-    color: '#666',
+    color: C.textSub,
     lineHeight: 20,
   },
   contactSection: {
+    backgroundColor: C.white,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 8,
+    borderRadius: 16,
     padding: 20,
     alignItems: 'center',
-    backgroundColor: '#fff',
-    marginTop: 16,
-    marginBottom: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  contactHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  contactIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: C.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   contactTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    fontWeight: '700',
+    color: C.text,
   },
   contactDesc: {
     fontSize: 14,
-    color: '#666',
+    color: C.textSub,
     textAlign: 'center',
     marginBottom: 20,
     lineHeight: 20,
@@ -160,15 +227,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#25D366',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    elevation: 2,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 12,
+    shadowColor: '#25D366',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   waButtonText: {
-    color: '#fff',
+    color: C.white,
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
     marginLeft: 12,
   },
 });

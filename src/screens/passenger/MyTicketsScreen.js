@@ -40,13 +40,36 @@ import {
   clearError,
 } from '../../store/slices/bookingSlice';
 
+// ─── Color Tokens ─────────────────────────────────────────────────────────────
+const C = {
+  primary: '#2563EB',
+  primaryLight: '#EFF6FF',
+  primaryMuted: '#BFDBFE',
+  bg: '#FFFFFF',
+  surface: '#F8FAFC',
+  surfaceAlt: '#F1F5F9',
+  border: '#E2E8F0',
+  text: '#0F172A',
+  textSub: '#64748B',
+  textMuted: '#94A3B8',
+  green: '#10B981',
+  greenLight: '#ECFDF5',
+  amber: '#F59E0B',
+  amberLight: '#FFFBEB',
+  red: '#EF4444',
+  redLight: '#FEF2F2',
+  white: '#FFFFFF',
+  headerBg: '#1E3A5F',
+  headerText: '#FFFFFF',
+  headerSub: '#93C5FD',
+};
+
 const { width } = Dimensions.get('window');
 
 const MyTicketsScreen = () => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
   
-  // Get state from Redux
   const bookingHistory = useSelector(selectBookingHistory);
   const historyLoading = useSelector(selectHistoryLoading);
   const historyError = useSelector(selectHistoryError);
@@ -54,13 +77,12 @@ const MyTicketsScreen = () => {
   const error = useSelector(selectError);
   
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState('all'); // 'all', 'upcoming', 'past', 'cancelled'
+  const [filter, setFilter] = useState('all');
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showActionModal, setShowActionModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancellationReason, setCancellationReason] = useState('');
-  const [activeTab, setActiveTab] = useState('active'); // 'active', 'history'
   const [searchQuery, setSearchQuery] = useState('');
   const fadeAnim = useState(new Animated.Value(0))[0];
 
@@ -69,10 +91,6 @@ const MyTicketsScreen = () => {
     { id: 'upcoming', label: 'Akan Datang', icon: 'calendar' },
     { id: 'past', label: 'Selesai', icon: 'checkmark-circle' },
     { id: 'cancelled', label: 'Dibatalkan', icon: 'close-circle' },
-  ];
-
-  const tabs = [
-    { id: 'active', label: 'Tiket Saya' },
   ];
 
   useFocusEffect(
@@ -87,7 +105,6 @@ const MyTicketsScreen = () => {
       Alert.alert('Error', error);
       dispatch(clearError());
     }
-    
     if (historyError) {
       Alert.alert('Error', historyError);
       dispatch(clearError());
@@ -96,8 +113,6 @@ const MyTicketsScreen = () => {
 
   const loadTickets = () => {
     dispatch(fetchBookingHistory());
-    
-    // Animation
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 500,
@@ -114,35 +129,23 @@ const MyTicketsScreen = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'confirmed':
-        return '#4CAF50';
-      case 'pending':
-        return '#FF9800';
-      case 'cancelled':
-        return '#F44336';
-      case 'completed':
-        return '#2196F3';
-      case 'expired':
-        return '#757575';
-      default:
-        return '#757575';
+      case 'confirmed': return C.green;
+      case 'pending': return C.amber;
+      case 'cancelled': return C.red;
+      case 'completed': return C.primary;
+      case 'expired': return C.textMuted;
+      default: return C.textMuted;
     }
   };
 
   const getStatusText = (status) => {
     switch (status) {
-      case 'confirmed':
-        return 'Terkonfirmasi';
-      case 'pending':
-        return 'Menunggu Pembayaran';
-      case 'cancelled':
-        return 'Dibatalkan';
-      case 'completed':
-        return 'Selesai';
-      case 'expired':
-        return 'Kadaluarsa';
-      default:
-        return status;
+      case 'confirmed': return 'Terkonfirmasi';
+      case 'pending': return 'Menunggu Pembayaran';
+      case 'cancelled': return 'Dibatalkan';
+      case 'completed': return 'Selesai';
+      case 'expired': return 'Kadaluarsa';
+      default: return status;
     }
   };
 
@@ -151,23 +154,11 @@ const MyTicketsScreen = () => {
     
     let filtered = [...bookingHistory];
     
-    // Filter by active/history tab
-    if (activeTab === 'active') {
-      filtered = filtered.filter(ticket => 
-        (ticket.booking_status === 'confirmed' || ticket.booking_status === 'pending')
-      );
-    } else {
-      filtered = filtered.filter(ticket => 
-        (ticket.booking_status === 'completed' || ticket.booking_status === 'cancelled' || ticket.booking_status === 'expired')
-      );
-    }
-    
-    // Filter by selected filter
     if (filter !== 'all') {
       switch (filter) {
         case 'upcoming':
           filtered = filtered.filter(ticket => 
-            (ticket.booking_status === 'confirmed' || ticket.booking_status === 'pending')
+            ticket.booking_status === 'confirmed' || ticket.booking_status === 'pending'
           );
           break;
         case 'past':
@@ -179,7 +170,6 @@ const MyTicketsScreen = () => {
       }
     }
     
-    // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(ticket =>
@@ -190,22 +180,11 @@ const MyTicketsScreen = () => {
       );
     }
     
-    // Sort by date (newest created first)
     return filtered.sort((a, b) => {
       const dateA = a.created_at ? new Date(a.created_at.replace(' ', 'T')) : new Date(0);
       const dateB = b.created_at ? new Date(b.created_at.replace(' ', 'T')) : new Date(0);
       return dateB.getTime() - dateA.getTime();
     });
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    try {
-      const date = parseISO(dateString);
-      return format(date, 'EEEE, d MMMM yyyy', { locale: id });
-    } catch (error) {
-      return dateString;
-    }
   };
 
   const formatShortDate = (dateString) => {
@@ -219,7 +198,6 @@ const MyTicketsScreen = () => {
   };
 
   const handleTicketPress = (ticket) => {
-    // Fetch ticket details first
     dispatch(fetchBookingDetail(ticket.id))
       .unwrap()
       .then(() => {
@@ -245,46 +223,21 @@ const MyTicketsScreen = () => {
       setShowCancelModal(false);
       setSelectedTicket(null);
       setCancellationReason('');
-      
       Alert.alert('Berhasil', 'Tiket berhasil dibatalkan.');
-      
-      // Refresh ticket list
       dispatch(fetchBookingHistory());
-      
     } catch (error) {
       Alert.alert('Error', 'Gagal membatalkan tiket.');
     }
   };
 
-  const handleDownloadTicket = async (ticket) => {
-    try {
-      await dispatch(downloadTicket(ticket.id)).unwrap();
-      Alert.alert('Berhasil', 'Tiket berhasil didownload.');
-    } catch (error) {
-      Alert.alert('Error', 'Gagal mendownload tiket.');
-    }
-  };
-
-  const handleShareTicket = (ticket) => {
-    Alert.alert(
-      'Bagikan Tiket',
-      'Bagikan tiket melalui:',
-      [
-        { text: 'WhatsApp', onPress: () => console.log('Share via WhatsApp') },
-        { text: 'Email', onPress: () => console.log('Share via Email') },
-        { text: 'Batal', style: 'cancel' },
-      ]
-    );
-  };
-
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="receipt-outline" size={80} color="#E0E0E0" />
+      <View style={styles.emptyIconWrap}>
+        <Ionicons name="receipt-outline" size={64} color={C.textMuted} />
+      </View>
       <Text style={styles.emptyTitle}>Tidak ada tiket</Text>
       <Text style={styles.emptyText}>
-        {activeTab === 'active' 
-          ? 'Anda belum memiliki tiket aktif'
-          : 'Belum ada riwayat tiket'}
+        Anda belum memiliki tiket aktif
       </Text>
       <TouchableOpacity 
         style={styles.browseButton}
@@ -304,9 +257,8 @@ const MyTicketsScreen = () => {
           setSelectedTicket(item);
           setShowActionModal(true);
         }}
-        activeOpacity={0.7}
+        activeOpacity={0.75}
       >
-        {/* Ticket Header */}
         <View style={styles.ticketHeader}>
           <View style={styles.ticketIdContainer}>
             <Text style={styles.ticketId}>{item.booking_code}</Text>
@@ -319,7 +271,6 @@ const MyTicketsScreen = () => {
           </Text>
         </View>
 
-        {/* Route Information */}
         <View style={styles.routeContainer}>
           <View style={styles.routeDotLine}>
             <View style={styles.routeDot} />
@@ -330,26 +281,24 @@ const MyTicketsScreen = () => {
             <View style={styles.routeStop}>
               <View>
                 <Text style={styles.cityName}>{item.schedule?.departure_city}</Text>
-                <Text style={styles.terminalName}>
-                  Terminal Keberangkatan
-                </Text>
+                <Text style={styles.terminalName}>Terminal Keberangkatan</Text>
               </View>
               <Text style={styles.timeText}>
                 {item.schedule?.departure_time ? new Date(item.schedule.departure_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
               </Text>
             </View>
             <View style={styles.durationContainer}>
-              <Ionicons name="time-outline" size={14} color="#666" />
-              <Text style={styles.durationText}>
-                {item.schedule?.duration || 'Perjalanan'}
-              </Text>
+              <View style={styles.durationBadge}>
+                <Ionicons name="time-outline" size={12} color={C.primary} />
+                <Text style={styles.durationText}>
+                  {item.schedule?.duration || 'Perjalanan'}
+                </Text>
+              </View>
             </View>
             <View style={styles.routeStop}>
               <View>
                 <Text style={styles.cityName}>{item.schedule?.arrival_city}</Text>
-                <Text style={styles.terminalName}>
-                  Terminal Kedatangan
-                </Text>
+                <Text style={styles.terminalName}>Terminal Kedatangan</Text>
               </View>
               <Text style={styles.timeText}>
                 {item.schedule?.arrival_time ? new Date(item.schedule.arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
@@ -358,30 +307,37 @@ const MyTicketsScreen = () => {
           </View>
         </View>
 
-        {/* Ticket Details */}
         <View style={styles.detailsContainer}>
           <View style={styles.detailRow}>
             <View style={styles.detailItem}>
-              <Ionicons name="bus-outline" size={16} color="#666" />
+              <View style={styles.detailIconWrap}>
+                <Ionicons name="bus-outline" size={14} color={C.primary} />
+              </View>
               <Text style={styles.detailLabel}>Bus</Text>
               <Text style={styles.detailValue} numberOfLines={1}>{item.schedule?.bus_name || 'Bus'}</Text>
             </View>
             <View style={styles.detailItem}>
-              <Ionicons name="people-outline" size={16} color="#666" />
+              <View style={styles.detailIconWrap}>
+                <Ionicons name="people-outline" size={14} color={C.primary} />
+              </View>
               <Text style={styles.detailLabel}>Penumpang</Text>
               <Text style={styles.detailValue}>{item.total_passengers || 1}</Text>
             </View>
           </View>
           <View style={styles.detailRow}>
             <View style={styles.detailItem}>
-              <Ionicons name="calendar-outline" size={16} color="#666" />
+              <View style={styles.detailIconWrap}>
+                <Ionicons name="calendar-outline" size={14} color={C.primary} />
+              </View>
               <Text style={styles.detailLabel}>Berangkat</Text>
               <Text style={styles.detailValue}>
                 {item.schedule?.departure_time ? formatShortDate(item.schedule.departure_time) : '-'}
               </Text>
             </View>
             <View style={styles.detailItem}>
-              <Ionicons name="cash-outline" size={16} color="#666" />
+              <View style={styles.detailIconWrap}>
+                <Ionicons name="cash-outline" size={14} color={C.primary} />
+              </View>
               <Text style={styles.detailLabel}>Total</Text>
               <Text style={styles.detailValue}>
                 Rp {parseFloat(item.total_price || 0).toLocaleString('id-ID')}
@@ -390,10 +346,9 @@ const MyTicketsScreen = () => {
           </View>
         </View>
 
-        {/* Ticket Footer */}
         <View style={styles.ticketFooter}>
           <View style={styles.seatsContainer}>
-            <Ionicons name="grid-outline" size={14} color="#666" />
+            <Ionicons name="grid-outline" size={14} color={C.textSub} />
             <Text style={styles.seatsText}>
               Kursi: {item.seats?.join(', ') || '-'}
             </Text>
@@ -404,8 +359,8 @@ const MyTicketsScreen = () => {
                 style={styles.viewButton}
                 onPress={() => handleTicketPress(item)}
               >
-                <Text style={styles.viewButtonText}>Lihat Tiket</Text>
-                <Ionicons name="chevron-forward" size={16} color="#1E88E5" />
+                <Text style={styles.viewButtonText}>Lihat</Text>
+                <Ionicons name="chevron-forward" size={16} color={C.primary} />
               </TouchableOpacity>
             )}
             {item.booking_status === 'pending' && (
@@ -440,7 +395,7 @@ const MyTicketsScreen = () => {
       <Ionicons 
         name={filterItem.icon} 
         size={20} 
-        color={filter === filterItem.id ? '#1E88E5' : '#666'} 
+        color={filter === filterItem.id ? C.primary : C.textSub} 
       />
       <Text style={[
         styles.filterButtonText,
@@ -454,17 +409,16 @@ const MyTicketsScreen = () => {
   if (historyLoading && !refreshing) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1E88E5" />
+        <ActivityIndicator size="large" color={C.primary} />
         <Text style={styles.loadingText}>Memuat tiket...</Text>
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="#1E88E5" barStyle="light-content" />
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.headerBg} translucent={false} />
       
-      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.headerTitle}>Tiket Saya</Text>
@@ -474,38 +428,34 @@ const MyTicketsScreen = () => {
             style={styles.filterIconButton}
             onPress={() => setShowFilterModal(true)}
           >
-            <Ionicons name="filter" size={24} color="#FFF" />
+            <Ionicons name="filter" size={22} color={C.headerText} />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+        <Ionicons name="search" size={18} color={C.textSub} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="Cari tiket..."
+          placeholderTextColor={C.textMuted}
           value={searchQuery}
           onChangeText={setSearchQuery}
           clearButtonMode="while-editing"
         />
       </View>
 
-
-
-      {/* Active Filter */}
       {filter !== 'all' && (
         <View style={styles.activeFilterContainer}>
           <Text style={styles.activeFilterText}>
             Filter: {ticketFilters.find(f => f.id === filter)?.label}
           </Text>
           <TouchableOpacity onPress={() => setFilter('all')}>
-            <Ionicons name="close-circle" size={18} color="#666" />
+            <Ionicons name="close-circle" size={16} color={C.textSub} />
           </TouchableOpacity>
         </View>
       )}
 
-      {/* Content */}
       <FlatList
         data={getFilteredTickets()}
         renderItem={renderTicketCard}
@@ -516,8 +466,8 @@ const MyTicketsScreen = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#1E88E5']}
-            tintColor="#1E88E5"
+            colors={[C.primary]}
+            tintColor={C.primary}
           />
         }
         ListEmptyComponent={renderEmptyState}
@@ -530,7 +480,6 @@ const MyTicketsScreen = () => {
         }
       />
 
-      {/* Filter Modal */}
       <Modal
         visible={showFilterModal}
         animationType="slide"
@@ -542,7 +491,7 @@ const MyTicketsScreen = () => {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Filter Tiket</Text>
               <TouchableOpacity onPress={() => setShowFilterModal(false)}>
-                <Ionicons name="close" size={24} color="#666" />
+                <Ionicons name="close" size={24} color={C.textSub} />
               </TouchableOpacity>
             </View>
             <View style={styles.modalContent}>
@@ -552,7 +501,6 @@ const MyTicketsScreen = () => {
         </View>
       </Modal>
 
-      {/* Action Modal */}
       <Modal
         visible={showActionModal}
         animationType="fade"
@@ -579,7 +527,7 @@ const MyTicketsScreen = () => {
                   handleTicketPress(selectedTicket);
                 }}
               >
-                <Ionicons name="eye-outline" size={24} color="#1E88E5" />
+                <Ionicons name="eye-outline" size={22} color={C.primary} />
                 <Text style={styles.actionButtonText}>Lihat Detail</Text>
               </TouchableOpacity>
               
@@ -591,21 +539,8 @@ const MyTicketsScreen = () => {
                     handleDownloadTicket(selectedTicket);
                   }}
                 >
-                  <Ionicons name="download-outline" size={24} color="#4CAF50" />
+                  <Ionicons name="download-outline" size={22} color={C.green} />
                   <Text style={styles.actionButtonText}>Download</Text>
-                </TouchableOpacity>
-              )}
-              
-              {selectedTicket?.status === 'confirmed' && (
-                <TouchableOpacity 
-                  style={styles.actionButton}
-                  onPress={() => {
-                    setShowActionModal(false);
-                    handleShareTicket(selectedTicket);
-                  }}
-                >
-                  <Ionicons name="share-social-outline" size={24} color="#FF9800" />
-                  <Text style={styles.actionButtonText}>Bagikan</Text>
                 </TouchableOpacity>
               )}
               
@@ -617,7 +552,7 @@ const MyTicketsScreen = () => {
                     setShowCancelModal(true);
                   }}
                 >
-                  <Ionicons name="close-circle-outline" size={24} color="#F44336" />
+                  <Ionicons name="close-circle-outline" size={22} color={C.red} />
                   <Text style={styles.actionButtonText}>Batalkan</Text>
                 </TouchableOpacity>
               )}
@@ -633,7 +568,6 @@ const MyTicketsScreen = () => {
         </TouchableOpacity>
       </Modal>
 
-      {/* Cancel Ticket Modal */}
       <Modal
         visible={showCancelModal}
         animationType="slide"
@@ -655,6 +589,7 @@ const MyTicketsScreen = () => {
                 <TextInput
                   style={styles.textInput}
                   placeholder="Masukkan alasan pembatalan"
+                  placeholderTextColor={C.textMuted}
                   value={cancellationReason}
                   onChangeText={setCancellationReason}
                   multiline
@@ -664,10 +599,7 @@ const MyTicketsScreen = () => {
               </View>
               
               <Text style={styles.refundInfo}>
-                {selectedTicket?.status === 'confirmed' 
-                  ? 'Dana akan dikembalikan dalam 3-5 hari kerja ke metode pembayaran awal.'
-                  : 'Pembayaran akan dibatalkan dan tidak akan diproses.'
-                }
+                Dana akan dikembalikan dalam 3-5 hari kerja ke metode pembayaran awal.
               </Text>
               
               <View style={styles.cancelModalActions}>
@@ -687,7 +619,7 @@ const MyTicketsScreen = () => {
                   disabled={loading}
                 >
                   {loading ? (
-                    <ActivityIndicator color="#FFF" />
+                    <ActivityIndicator color={C.white} />
                   ) : (
                     <Text style={styles.confirmCancelButtonText}>Ya, Batalkan</Text>
                   )}
@@ -702,35 +634,36 @@ const MyTicketsScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: C.headerBg,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: C.surface,
   },
   loadingText: {
     marginTop: 10,
-    color: '#666',
-    fontSize: 16,
+    color: C.textSub,
+    fontSize: 15,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1E88E5',
+    backgroundColor: C.headerBg,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   headerLeft: {
     flex: 1,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFF',
+    fontSize: 18,
+    fontWeight: '700',
+    color: C.headerText,
   },
   headerRight: {
     flexDirection: 'row',
@@ -741,80 +674,46 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     marginHorizontal: 16,
-    marginTop: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+    marginTop: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: C.border,
   },
   searchIcon: {
-    marginRight: 8,
+    marginRight: 10,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#333',
-    paddingVertical: 4,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#FFF',
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  tabButton: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 12,
-    position: 'relative',
-  },
-  tabButtonActive: {
-    backgroundColor: '#FFF',
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#666',
-  },
-  tabTextActive: {
-    color: '#1E88E5',
-    fontWeight: '600',
-  },
-  tabIndicator: {
-    position: 'absolute',
-    bottom: 0,
-    left: '25%',
-    right: '25%',
-    height: 3,
-    backgroundColor: '#1E88E5',
-    borderTopLeftRadius: 3,
-    borderTopRightRadius: 3,
+    color: C.text,
+    paddingVertical: 2,
   },
   activeFilterContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFF',
-    paddingHorizontal: 16,
+    backgroundColor: C.white,
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderRadius: 8,
   },
   activeFilterText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: C.textSub,
   },
   listContainer: {
     padding: 16,
     paddingBottom: 32,
   },
   listHeader: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: C.textSub,
     marginBottom: 12,
   },
   emptyContainer: {
@@ -822,76 +721,88 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 60,
   },
+  emptyIconWrap: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: C.surfaceAlt,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#666',
+    fontWeight: '700',
+    color: C.text,
     marginTop: 16,
   },
   emptyText: {
     fontSize: 14,
-    color: '#999',
+    color: C.textSub,
     textAlign: 'center',
     marginTop: 8,
     marginHorizontal: 32,
-    lineHeight: 20,
   },
   browseButton: {
-    backgroundColor: '#1E88E5',
-    paddingHorizontal: 24,
+    backgroundColor: C.primary,
+    paddingHorizontal: 28,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     marginTop: 20,
+    shadowColor: C.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   browseButtonText: {
-    color: '#FFF',
+    color: C.white,
     fontSize: 14,
     fontWeight: '600',
   },
   ticketCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
+    backgroundColor: C.white,
+    borderRadius: 14,
     padding: 16,
-    marginBottom: 12,
+    marginBottom: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
   },
   ticketHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   ticketIdContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   ticketId: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 15,
+    fontWeight: '700',
+    color: C.text,
     marginRight: 8,
   },
   statusBadge: {
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
   statusText: {
-    color: '#FFF',
+    color: C.white,
     fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   bookingDate: {
     fontSize: 12,
-    color: '#666',
+    color: C.textSub,
   },
   routeContainer: {
     flexDirection: 'row',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   routeDotLine: {
     alignItems: 'center',
@@ -901,15 +812,15 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#1E88E5',
+    backgroundColor: C.primary,
   },
   destinationDot: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: C.green,
   },
   routeLine: {
     width: 2,
     height: 40,
-    backgroundColor: '#1E88E5',
+    backgroundColor: C.primary,
     marginVertical: 4,
   },
   routeDetails: {
@@ -919,56 +830,71 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
   },
   cityName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#333',
+    color: C.text,
   },
   terminalName: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
+    fontSize: 11,
+    color: C.textSub,
+    marginTop: 1,
   },
   timeText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
-    color: '#333',
+    color: C.text,
   },
   durationContainer: {
+    alignItems: 'center',
+    marginVertical: 4,
+  },
+  durationBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 8,
-    marginLeft: 4,
+    backgroundColor: C.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    borderRadius: 10,
+    gap: 4,
   },
   durationText: {
-    fontSize: 12,
-    color: '#666',
-    marginLeft: 6,
+    fontSize: 11,
+    color: C.primary,
+    fontWeight: '500',
   },
   detailsContainer: {
     marginBottom: 12,
   },
   detailRow: {
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   detailItem: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
   },
+  detailIconWrap: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: C.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 6,
+  },
   detailLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginLeft: 6,
+    fontSize: 11,
+    color: C.textSub,
     marginRight: 4,
+    fontWeight: '500',
   },
   detailValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
+    fontSize: 13,
+    fontWeight: '600',
+    color: C.text,
     flex: 1,
   },
   ticketFooter: {
@@ -976,7 +902,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    borderTopColor: C.surfaceAlt,
     paddingTop: 12,
   },
   seatsContainer: {
@@ -985,7 +911,7 @@ const styles = StyleSheet.create({
   },
   seatsText: {
     fontSize: 12,
-    color: '#666',
+    color: C.textSub,
     marginLeft: 6,
   },
   actionButtons: {
@@ -994,27 +920,27 @@ const styles = StyleSheet.create({
   viewButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E3F2FD',
+    backgroundColor: C.primaryLight,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 6,
+    borderRadius: 8,
   },
   viewButtonText: {
-    color: '#1E88E5',
+    color: C.primary,
     fontSize: 12,
-    fontWeight: '500',
-    marginRight: 4,
+    fontWeight: '600',
+    marginRight: 2,
   },
   payButton: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 12,
+    backgroundColor: C.green,
+    paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 6,
+    borderRadius: 8,
   },
   payButtonText: {
-    color: '#FFF',
+    color: C.white,
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
@@ -1022,7 +948,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContainer: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: 24,
@@ -1033,12 +959,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: C.border,
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: C.text,
   },
   modalContent: {
     padding: 16,
@@ -1048,23 +974,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 8,
+    borderRadius: 10,
     marginBottom: 8,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: C.surface,
   },
   filterButtonActive: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: C.primaryLight,
     borderWidth: 1,
-    borderColor: '#1E88E5',
+    borderColor: C.primary,
   },
   filterButtonText: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 15,
+    color: C.textSub,
     marginLeft: 12,
   },
   filterButtonTextActive: {
-    color: '#1E88E5',
-    fontWeight: '500',
+    color: C.primary,
+    fontWeight: '600',
   },
   actionModalOverlay: {
     flex: 1,
@@ -1073,7 +999,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionModalContainer: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     borderRadius: 16,
     width: width * 0.85,
     overflow: 'hidden',
@@ -1081,17 +1007,17 @@ const styles = StyleSheet.create({
   actionModalHeader: {
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: C.border,
   },
   actionModalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '700',
+    color: C.text,
     marginBottom: 4,
   },
   actionModalSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: C.textSub,
   },
   actionButtonsContainer: {
     padding: 16,
@@ -1101,49 +1027,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
     paddingHorizontal: 16,
-    borderRadius: 8,
+    borderRadius: 10,
     marginBottom: 8,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: C.surface,
   },
   actionButtonText: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: 15,
+    color: C.text,
     marginLeft: 12,
     flex: 1,
   },
   cancelActionButton: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: C.border,
     marginTop: 8,
   },
   cancelActionButtonText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '500',
+    color: C.textSub,
+    fontSize: 15,
+    fontWeight: '600',
     textAlign: 'center',
     flex: 1,
   },
   cancelModalContainer: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     borderRadius: 16,
     marginHorizontal: 20,
     overflow: 'hidden',
   },
   cancelModalHeader: {
     padding: 20,
-    backgroundColor: '#FFEBEE',
+    backgroundColor: C.redLight,
     alignItems: 'center',
   },
   cancelModalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#D32F2F',
+    fontWeight: '700',
+    color: C.red,
     marginBottom: 4,
   },
   cancelModalSubtitle: {
     fontSize: 14,
-    color: '#D32F2F',
+    color: C.red,
     textAlign: 'center',
   },
   cancelModalContent: {
@@ -1152,23 +1078,25 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#333',
+    color: C.text,
     marginBottom: 8,
   },
   inputContainer: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
+    backgroundColor: C.surface,
+    borderRadius: 10,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: C.border,
   },
   textInput: {
     padding: 12,
     fontSize: 14,
-    color: '#333',
+    color: C.text,
     minHeight: 80,
   },
   refundInfo: {
     fontSize: 12,
-    color: '#666',
+    color: C.textSub,
     textAlign: 'center',
     marginBottom: 20,
     lineHeight: 16,
@@ -1180,24 +1108,24 @@ const styles = StyleSheet.create({
   modalButton: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
   },
   cancelModalButton: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: C.border,
   },
   cancelModalButtonText: {
-    color: '#666',
+    color: C.textSub,
     fontSize: 14,
     fontWeight: '500',
   },
   confirmCancelButton: {
-    backgroundColor: '#F44336',
+    backgroundColor: C.red,
   },
   confirmCancelButtonText: {
-    color: '#FFF',
+    color: C.white,
     fontSize: 14,
     fontWeight: '600',
   },

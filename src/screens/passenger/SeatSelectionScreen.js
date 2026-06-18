@@ -26,12 +26,35 @@ import {
   selectSelectedBus,
 } from '../../store/slices/bookingSlice';
 
+// ─── Color Tokens ─────────────────────────────────────────────────────────────
+const C = {
+  primary: '#2563EB',
+  primaryLight: '#EFF6FF',
+  primaryMuted: '#BFDBFE',
+  bg: '#FFFFFF',
+  surface: '#F8FAFC',
+  surfaceAlt: '#F1F5F9',
+  border: '#E2E8F0',
+  text: '#0F172A',
+  textSub: '#64748B',
+  textMuted: '#94A3B8',
+  green: '#10B981',
+  greenLight: '#ECFDF5',
+  amber: '#F59E0B',
+  amberLight: '#FFFBEB',
+  red: '#EF4444',
+  redLight: '#FEF2F2',
+  white: '#FFFFFF',
+  headerBg: '#1E3A5F',
+  headerText: '#FFFFFF',
+  headerSub: '#93C5FD',
+};
+
 const SeatSelectionScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const dispatch = useDispatch();
   
-  // Get state from Redux
   const selectedBus = useSelector(selectSelectedBus);
   const selectedSeats = useSelector(selectSelectedSeats);
   const seatMap = useSelector(selectSeatMap);
@@ -44,14 +67,12 @@ const SeatSelectionScreen = () => {
   const { busId, scheduleId, busName, departure, destination, departureTime, price, passengerCount: pc } = route.params || {};
 
   useEffect(() => {
-    // Initialize from route params or Redux state
     if (pc) {
       setPassengerCount(pc);
     } else if (selectedBus) {
       setPassengerCount(selectedBus.passengerCount || 1);
     }
 
-    // Check seat availability
     if (busId && scheduleId) {
       dispatch(checkSeatAvailability({
         busId,
@@ -72,7 +93,6 @@ const SeatSelectionScreen = () => {
       return;
     }
 
-    // Check if max seats reached
     const isSelected = selectedSeats.some(s => s.number === seat.number);
     if (!isSelected && selectedSeats.length >= passengerCount) {
       Alert.alert(
@@ -103,7 +123,6 @@ const SeatSelectionScreen = () => {
       return;
     }
 
-    // Navigate to booking screen
     navigation.navigate('Booking', {
       busId,
       scheduleId,
@@ -122,27 +141,27 @@ const SeatSelectionScreen = () => {
   };
 
   const getSeatTypeColor = (type, status, isSelected) => {
-    if (status === 'booked') return '#E0E0E0';
-    if (isSelected) return '#4CAF50';
+    if (status === 'booked') return C.surfaceAlt;
+    if (isSelected) return C.green;
     
     switch (type) {
       case 'premium':
-        return '#FF9800';
+        return C.amber;
       default:
-        return '#1E88E5';
+        return C.primary;
     }
   };
 
   const renderSeatLegend = () => (
     <View style={styles.legendContainer}>
       <View style={styles.legendRow}>
-        <View style={[styles.legendItem, { backgroundColor: '#1E88E5' }]} />
+        <View style={[styles.legendItem, { backgroundColor: C.primary }]} />
         <Text style={styles.legendText}>Tersedia</Text>
         
-        <View style={[styles.legendItem, { backgroundColor: '#4CAF50' }]} />
+        <View style={[styles.legendItem, { backgroundColor: C.green, marginLeft: 16 }]} />
         <Text style={styles.legendText}>Terpilih</Text>
         
-        <View style={[styles.legendItem, { backgroundColor: '#E0E0E0' }]} />
+        <View style={[styles.legendItem, { backgroundColor: C.surfaceAlt, marginLeft: 16 }]} />
         <Text style={styles.legendText}>Terisi</Text>
       </View>
     </View>
@@ -151,7 +170,7 @@ const SeatSelectionScreen = () => {
   const renderDriverSection = () => (
     <View style={styles.driverSection}>
       <View style={styles.driverIcon}>
-        <MaterialCommunityIcons name="steering" size={40} color="#666" />
+        <MaterialCommunityIcons name="steering" size={32} color={C.textSub} />
       </View>
       <Text style={styles.driverText}>Sopir</Text>
     </View>
@@ -160,23 +179,22 @@ const SeatSelectionScreen = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1E88E5" />
+        <ActivityIndicator size="large" color={C.primary} />
         <Text style={styles.loadingText}>Memuat denah kursi...</Text>
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="#1E88E5" barStyle="light-content" />
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.headerBg} translucent={false} />
       
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color="#FFF" />
+          <Ionicons name="arrow-back" size={24} color={C.headerText} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Pilih Kursi</Text>
         <TouchableOpacity 
@@ -193,7 +211,6 @@ const SeatSelectionScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Bus Info */}
       <View style={styles.busInfoCard}>
         <View style={styles.busInfoRow}>
           <Text style={styles.busName}>{busName || 'Bus'}</Text>
@@ -206,7 +223,6 @@ const SeatSelectionScreen = () => {
         </Text>
       </View>
 
-      {/* Selected Seats Summary */}
       {selectedSeats.length > 0 && (
         <View style={styles.selectionSummary}>
           <Text style={styles.summaryTitle}>Kursi Terpilih:</Text>
@@ -214,9 +230,6 @@ const SeatSelectionScreen = () => {
             {selectedSeats.map((seat, index) => (
               <View key={index} style={styles.selectedSeatBadge}>
                 <Text style={styles.selectedSeatText}>{seat.number}</Text>
-                <Text style={styles.selectedSeatPrice}>
-                  Rp {price?.toLocaleString('id-ID') || '0'}
-                </Text>
               </View>
             ))}
           </View>
@@ -231,7 +244,6 @@ const SeatSelectionScreen = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Seat Layout */}
         <View style={styles.seatLayoutContainer}>
           {renderDriverSection()}
           
@@ -251,15 +263,17 @@ const SeatSelectionScreen = () => {
                           seat.status,
                           selectedSeats.some(s => s.number === seat.number)
                         ),
-                        marginRight: seatIndex === 1 ? 20 : 8, // Aisle gap
+                        marginRight: seatIndex === 1 ? 16 : 6,
                       },
+                      seat.status === 'booked' && styles.seatBooked,
+                      selectedSeats.some(s => s.number === seat.number) && styles.seatSelected,
                     ]}
                     onPress={() => handleSeatSelect(seat)}
                     disabled={seat.status === 'booked' || loading}
                   >
                     <Text style={[
                       styles.seatText,
-                      (seat.status === 'booked' || selectedSeats.some(s => s.number === seat.number)) && { color: '#FFF' }
+                      (seat.status === 'booked' || selectedSeats.some(s => s.number === seat.number)) && styles.seatTextWhite
                     ]}>
                       {seat.number}
                     </Text>
@@ -270,31 +284,25 @@ const SeatSelectionScreen = () => {
           ))}
         </View>
 
-        {/* Legend */}
         {renderSeatLegend()}
 
-        {/* Additional Info */}
         <View style={styles.infoCard}>
           <View style={styles.infoRow}>
-            <Ionicons name="information-circle" size={20} color="#1E88E5" />
+            <Ionicons name="information-circle" size={18} color={C.primary} />
             <Text style={styles.infoTitle}>Informasi Penting:</Text>
           </View>
           <Text style={styles.infoText}>
             • Pilih {passengerCount} kursi untuk {passengerCount} penumpang
           </Text>
           <Text style={styles.infoText}>
-            • Kursi berwarna abu-abu sudah dipesan
+            • Kursi abu-abu sudah dipesan
           </Text>
           <Text style={styles.infoText}>
-            • Kursi premium memiliki fasilitas tambahan
-          </Text>
-          <Text style={styles.infoText}>
-            • Silakan hubungi customer service untuk kebutuhan khusus
+            • Kursi kuning memiliki fasilitas premium
           </Text>
         </View>
       </ScrollView>
 
-      {/* Action Button */}
       <View style={styles.actionContainer}>
         <View style={styles.priceSummary}>
           <Text style={styles.priceLabel}>Total Pembayaran</Text>
@@ -312,11 +320,11 @@ const SeatSelectionScreen = () => {
           disabled={selectedSeats.length === 0 || loading}
         >
           {loading ? (
-            <ActivityIndicator color="#FFF" />
+            <ActivityIndicator color={C.white} />
           ) : (
             <>
               <Text style={styles.continueButtonText}>Lanjutkan</Text>
-              <Ionicons name="arrow-forward" size={20} color="#FFF" />
+              <Ionicons name="arrow-forward" size={18} color={C.white} />
             </>
           )}
         </TouchableOpacity>
@@ -326,100 +334,92 @@ const SeatSelectionScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: C.headerBg,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: C.surface,
   },
   loadingText: {
     marginTop: 10,
-    color: '#666',
-    fontSize: 16,
+    color: C.textSub,
+    fontSize: 15,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1E88E5',
+    backgroundColor: C.headerBg,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   backButton: {
     padding: 4,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#FFF',
+    fontWeight: '700',
+    color: C.headerText,
   },
   clearButton: {
     padding: 4,
   },
   clearButtonText: {
-    color: '#FFF',
+    color: C.headerText,
     fontSize: 14,
     fontWeight: '500',
   },
   busInfoCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     margin: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
   },
   busInfoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   busName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  busClass: {
-    fontSize: 14,
-    color: '#666',
-    backgroundColor: '#F0F0F0',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    fontSize: 17,
+    fontWeight: '700',
+    color: C.text,
   },
   routeText: {
-    fontSize: 16,
-    color: '#333',
-    marginBottom: 4,
+    fontSize: 15,
+    color: C.text,
+    marginBottom: 2,
   },
   dateText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: C.textSub,
   },
   selectionSummary: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     marginHorizontal: 16,
     marginBottom: 16,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 14,
+    padding: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowRadius: 4,
     elevation: 2,
   },
   summaryTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#333',
+    color: C.text,
     marginBottom: 8,
   },
   seatsList: {
@@ -428,156 +428,160 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   selectedSeatBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E3F2FD',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    backgroundColor: C.primaryLight,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 8,
     marginRight: 8,
-    marginBottom: 8,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: C.primaryMuted,
   },
   selectedSeatText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#1E88E5',
-    marginRight: 4,
-  },
-  selectedSeatPrice: {
-    fontSize: 12,
-    color: '#666',
+    fontWeight: '600',
+    color: C.primary,
   },
   totalText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1E88E5',
+    fontSize: 15,
+    fontWeight: '700',
+    color: C.primary,
   },
   content: {
     flex: 1,
+    backgroundColor: C.surface,
   },
   scrollContent: {
     paddingBottom: 100,
   },
   seatLayoutContainer: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     marginHorizontal: 16,
     marginBottom: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
   },
   driverSection: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   driverIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#F5F5F5',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: C.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   driverText: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 11,
+    color: C.textSub,
+    fontWeight: '500',
   },
   seatRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   rowLabel: {
-    width: 24,
-    fontSize: 14,
+    width: 22,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#333',
+    color: C.text,
     textAlign: 'center',
   },
   seatsInRow: {
     flex: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginLeft: 12,
+    marginLeft: 8,
   },
   seatButton: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'relative',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  seatBooked: {
+    borderColor: C.border,
+  },
+  seatSelected: {
+    borderColor: C.green,
+    borderWidth: 2,
   },
   seatText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    color: '#333',
+    color: C.white,
   },
-  premiumIcon: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
+  seatTextWhite: {
+    color: C.white,
   },
   legendContainer: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     marginHorizontal: 16,
     marginBottom: 16,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 14,
+    padding: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowRadius: 4,
     elevation: 2,
   },
   legendRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    flexWrap: 'wrap',
   },
   legendItem: {
-    width: 20,
-    height: 20,
+    width: 18,
+    height: 18,
     borderRadius: 4,
-    marginRight: 8,
+    marginRight: 6,
   },
   legendText: {
     fontSize: 12,
-    color: '#666',
-    marginRight: 16,
+    color: C.textSub,
+    marginRight: 12,
   },
   infoCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     marginHorizontal: 16,
-    borderRadius: 12,
-    padding: 16,
+    marginBottom: 16,
+    borderRadius: 14,
+    padding: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowRadius: 4,
     elevation: 2,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   infoTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#333',
+    color: C.text,
     marginLeft: 8,
   },
   infoText: {
     fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-    marginLeft: 28,
+    color: C.textSub,
+    marginBottom: 3,
+    marginLeft: 26,
     lineHeight: 16,
   },
   actionContainer: {
@@ -585,9 +589,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FFF',
+    backgroundColor: C.white,
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    borderTopColor: C.border,
     paddingHorizontal: 16,
     paddingVertical: 12,
     flexDirection: 'row',
@@ -598,30 +602,38 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   priceLabel: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 11,
+    color: C.textSub,
+    fontWeight: '500',
   },
   priceValue: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#1E88E5',
+    color: C.primary,
   },
   continueButton: {
-    backgroundColor: '#1E88E5',
+    backgroundColor: C.primary,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 10,
+    shadowColor: C.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   continueButtonDisabled: {
-    backgroundColor: '#90CAF9',
+    backgroundColor: C.primaryMuted,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   continueButtonText: {
-    color: '#FFF',
-    fontSize: 16,
+    color: C.white,
+    fontSize: 15,
     fontWeight: '600',
-    marginRight: 8,
+    marginRight: 6,
   },
 });
 
