@@ -5,7 +5,7 @@ import { Platform, Alert } from 'react-native';
 const getBaseURL = () => {
   if (__DEV__) {
     if (Platform.OS === 'android') {
-      return 'https://5f8f-157-15-41-36.ngrok-free.app'; // IP komputer Anda
+      return 'https://c422-157-15-41-36.ngrok-free.app/api'; // IP komputer Anda
     } else {
       return 'http://localhost:8000/api'; // untuk iOS simulator
     }
@@ -19,13 +19,13 @@ const api = axios.create({
   timeout: 10000, // 10 detik timeout
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    Accept: 'application/json',
   },
 });
 
 // Request interceptor
 api.interceptors.request.use(
-  async (config) => {
+  async config => {
     console.log('Full URL:', config.baseURL + config.url);
     try {
       const token = await AsyncStorage.getItem('userToken');
@@ -37,18 +37,18 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
+  error => {
     console.error('Request error:', error);
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor
 api.interceptors.response.use(
-  (response) => {
+  response => {
     return response;
   },
-  async (error) => {
+  async error => {
     const originalRequest = error.config;
     console.error('API Error Response:', error.response?.data);
 
@@ -80,7 +80,7 @@ api.interceptors.response.use(
       Alert.alert(
         'Network Error',
         'Please check your internet connection and try again.',
-        [{ text: 'OK' }]
+        [{ text: 'OK' }],
       );
     }
 
@@ -89,12 +89,12 @@ api.interceptors.response.use(
       Alert.alert(
         'Server Error',
         'Something went wrong on our server. Please try again later.',
-        [{ text: 'OK' }]
+        [{ text: 'OK' }],
       );
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

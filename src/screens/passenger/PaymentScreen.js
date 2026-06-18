@@ -13,6 +13,8 @@ import {
   Dimensions,
   Platform,
   TextInput,
+  Image,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -42,13 +44,13 @@ const PaymentScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const dispatch = useDispatch();
-  
+
   // Get state from Redux
   const currentBooking = useSelector(selectCurrentBooking);
   const paymentInfo = useSelector(selectPaymentInfo);
   const loading = useSelector(selectLoading);
   const error = useSelector(selectError);
-  
+
   const [processing, setProcessing] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState('bank_transfer');
   const [showQRModal, setShowQRModal] = useState(false);
@@ -62,6 +64,7 @@ const PaymentScreen = () => {
   });
   const [selectedBank, setSelectedBank] = useState('bca');
   const [showVAModal, setShowVAModal] = useState(false);
+  const [showEwalletModal, setShowEwalletModal] = useState(false);
   const [paymentSteps, setPaymentSteps] = useState([
     { id: 1, title: 'Pilih Metode', completed: true, active: true },
     { id: 2, title: 'Bayar', completed: false, active: false },
@@ -71,7 +74,8 @@ const PaymentScreen = () => {
 
   // Booking data from params or Redux
   const bookingData = route.params?.bookingData || {};
-  const totalAmount = route.params?.totalAmount || currentBooking.totalAmount || 0;
+  const totalAmount =
+    route.params?.totalAmount || currentBooking.totalAmount || 0;
   const bookingId = route.params?.bookingId || currentBooking.id;
 
   // Default booking data
@@ -79,7 +83,8 @@ const PaymentScreen = () => {
     busName: currentBooking.busName || 'Sinar Jaya Executive',
     departure: currentBooking.departure || 'Jakarta',
     destination: currentBooking.destination || 'Bandung',
-    departureDate: currentBooking.departureDate || new Date().toLocaleDateString('id-ID'),
+    departureDate:
+      currentBooking.departureDate || new Date().toLocaleDateString('id-ID'),
     departureTime: currentBooking.departureTime || '08:00',
     passengerCount: currentBooking.passengerCount || 1,
     selectedSeats: currentBooking.seats?.map(s => s.number) || ['A1'],
@@ -156,7 +161,7 @@ const PaymentScreen = () => {
 
     // Start countdown timer
     const timer = setInterval(() => {
-      setCountdown((prev) => {
+      setCountdown(prev => {
         if (prev <= 1) {
           clearInterval(timer);
           Alert.alert(
@@ -167,7 +172,7 @@ const PaymentScreen = () => {
                 text: 'OK',
                 onPress: () => navigation.navigate('SearchBus'),
               },
-            ]
+            ],
           );
           return 0;
         }
@@ -192,30 +197,38 @@ const PaymentScreen = () => {
     }
   }, [error]);
 
-  const formatTime = (seconds) => {
+  const formatTime = seconds => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${mins.toString().padStart(2, '0')}:${secs
+      .toString()
+      .padStart(2, '0')}`;
   };
 
-  const copyToClipboard = (text) => {
+  const copyToClipboard = text => {
     Clipboard.setString(text);
     Alert.alert('Sukses', 'Nomor Virtual Account berhasil disalin!');
   };
 
   const handleVerify = async () => {
     if (!currentBooking?.payment_id) return;
-    
+
     try {
       setProcessing(true);
-      const res = await dispatch(verifyPayment(currentBooking.payment_id)).unwrap();
+      const res = await dispatch(
+        verifyPayment(currentBooking.payment_id),
+      ).unwrap();
       setProcessing(false);
-      
+
       if (res.data && res.data.status === 'success') {
         setShowVAModal(false);
+        setShowEwalletModal(false);
         setShowSuccess(true);
       } else {
-        Alert.alert('Status Pembayaran', 'Pembayaran belum diterima. Silakan selesaikan pembayaran dan cek kembali.');
+        Alert.alert(
+          'Status Pembayaran',
+          'Pembayaran belum diterima. Silakan selesaikan pembayaran dan cek kembali.',
+        );
       }
     } catch (error) {
       setProcessing(false);
@@ -230,13 +243,13 @@ const PaymentScreen = () => {
         'Anda memilih pembayaran di tempat. Pastikan untuk membayar kepada sopir bus saat naik.',
         [
           { text: 'Batalkan', style: 'cancel' },
-          { 
-            text: 'Konfirmasi', 
+          {
+            text: 'Konfirmasi',
             onPress: async () => {
               await processCashPayment();
-            }
+            },
           },
-        ]
+        ],
       );
       return;
     }
@@ -263,20 +276,31 @@ const PaymentScreen = () => {
       };
 
       // Simulate API call using real thunk
-      const res = await dispatch(processPayment({ 
-        bookingId: bookingId, 
-        paymentData: paymentData 
-      })).unwrap();
-      
+      const res = await dispatch(
+        processPayment({
+          bookingId: bookingId,
+          paymentData: paymentData,
+        }),
+      ).unwrap();
+
       updatePaymentSteps(3);
-      
+
       if (res.data && res.data.midtrans) {
         setProcessing(false);
-        setShowVAModal(true);
+        // E-wallet / QRIS returns a scannable QR code (and a deeplink);
+        // bank transfer returns a virtual account number.
+        if (
+          res.data.qr_code_url ||
+          res.data.deeplink_url ||
+          selectedMethod === 'e_wallet'
+        ) {
+          setShowEwalletModal(true);
+        } else {
+          setShowVAModal(true);
+        }
       } else {
         await handlePaymentSuccess();
       }
-      
     } catch (error) {
       setProcessing(true); // Keep processing state while showing alert if you want, or set to false
       setProcessing(false);
@@ -286,19 +310,21 @@ const PaymentScreen = () => {
 
   const processCashPayment = async () => {
     setProcessing(true);
-    
+
     try {
       // Prepare payment data for cash (Backend might expect something)
       const paymentData = {
         payment_method: 'cash',
-        amount: totalAmount
+        amount: totalAmount,
       };
 
-      await dispatch(processPayment({ 
-        bookingId: bookingId, 
-        paymentData: paymentData 
-      })).unwrap();
-      
+      await dispatch(
+        processPayment({
+          bookingId: bookingId,
+          paymentData: paymentData,
+        }),
+      ).unwrap();
+
       setProcessing(false);
       updatePaymentSteps(3);
       await handlePaymentSuccess();
@@ -311,10 +337,10 @@ const PaymentScreen = () => {
   const handlePaymentSuccess = async () => {
     setProcessing(false);
     setShowSuccess(true);
-    
+
     // Refresh history
     dispatch(fetchBookingHistory());
-    
+
     // Clear current booking if successful
     dispatch(clearCurrentBooking());
   };
@@ -324,26 +350,29 @@ const PaymentScreen = () => {
       Alert.alert('Error', 'Nomor kartu tidak valid');
       return false;
     }
-    
-    if (!cardDetails.cardExpiry.trim() || !/^\d{2}\/\d{2}$/.test(cardDetails.cardExpiry)) {
+
+    if (
+      !cardDetails.cardExpiry.trim() ||
+      !/^\d{2}\/\d{2}$/.test(cardDetails.cardExpiry)
+    ) {
       Alert.alert('Error', 'Tanggal kadaluarsa tidak valid (MM/YY)');
       return false;
     }
-    
+
     if (!cardDetails.cardCVC.trim() || cardDetails.cardCVC.length < 3) {
       Alert.alert('Error', 'CVC tidak valid');
       return false;
     }
-    
+
     if (!cardDetails.cardName.trim()) {
       Alert.alert('Error', 'Nama pemegang kartu harus diisi');
       return false;
     }
-    
+
     return true;
   };
 
-  const updatePaymentSteps = (stepIndex) => {
+  const updatePaymentSteps = stepIndex => {
     const updatedSteps = paymentSteps.map((step, index) => ({
       ...step,
       completed: index < stepIndex,
@@ -352,35 +381,38 @@ const PaymentScreen = () => {
     setPaymentSteps(updatedSteps);
   };
 
-  const renderPaymentStep = (step) => (
+  const renderPaymentStep = step => (
     <View key={step.id} style={styles.stepContainer}>
-      <View style={[
-        styles.stepCircle,
-        step.completed && styles.stepCircleCompleted,
-        step.active && styles.stepCircleActive,
-      ]}>
+      <View
+        style={[
+          styles.stepCircle,
+          step.completed && styles.stepCircleCompleted,
+          step.active && styles.stepCircleActive,
+        ]}
+      >
         {step.completed ? (
           <Ionicons name="checkmark" size={20} color="#FFF" />
         ) : (
-          <Text style={[
-            styles.stepNumber,
-            step.active && styles.stepNumberActive,
-          ]}>
+          <Text
+            style={[styles.stepNumber, step.active && styles.stepNumberActive]}
+          >
             {step.id}
           </Text>
         )}
       </View>
-      <Text style={[
-        styles.stepTitle,
-        step.active && styles.stepTitleActive,
-        step.completed && styles.stepTitleCompleted,
-      ]}>
+      <Text
+        style={[
+          styles.stepTitle,
+          step.active && styles.stepTitleActive,
+          step.completed && styles.stepTitleCompleted,
+        ]}
+      >
         {step.title}
       </Text>
     </View>
   );
 
-  const renderPaymentMethod = (method) => {
+  const renderPaymentMethod = method => {
     const IconComponent = method.type;
     return (
       <TouchableOpacity
@@ -392,7 +424,12 @@ const PaymentScreen = () => {
         onPress={() => setSelectedMethod(method.id)}
       >
         <View style={styles.methodLeft}>
-          <View style={[styles.methodIcon, { backgroundColor: `${method.color}20` }]}>
+          <View
+            style={[
+              styles.methodIcon,
+              { backgroundColor: `${method.color}20` },
+            ]}
+          >
             <IconComponent name={method.icon} size={24} color={method.color} />
           </View>
           <View style={styles.methodInfo}>
@@ -420,26 +457,36 @@ const PaymentScreen = () => {
         return (
           <View style={styles.instructionCard}>
             <Text style={styles.instructionTitle}>Pilih Bank Tujuan:</Text>
-            {banks.map((bank) => (
-              <TouchableOpacity 
-                key={bank.id} 
+            {banks.map(bank => (
+              <TouchableOpacity
+                key={bank.id}
                 style={[
-                  styles.bankCard, 
-                  selectedBank === bank.id && styles.paymentMethodSelected
+                  styles.bankCard,
+                  selectedBank === bank.id && styles.paymentMethodSelected,
                 ]}
                 onPress={() => setSelectedBank(bank.id)}
               >
                 <View style={styles.bankHeader}>
-                  <View style={[styles.bankLogo, { backgroundColor: '#4CAF50' }]}>
-                    <Text style={styles.bankInitials}>{bank.name.substring(0, 2)}</Text>
+                  <View
+                    style={[styles.bankLogo, { backgroundColor: '#4CAF50' }]}
+                  >
+                    <Text style={styles.bankInitials}>
+                      {bank.name.substring(0, 2)}
+                    </Text>
                   </View>
                   <View style={styles.bankInfo}>
                     <Text style={styles.bankName}>{bank.name}</Text>
-                    <Text style={styles.bankCode}>Proses Cepat via Virtual Account Midtrans</Text>
+                    <Text style={styles.bankCode}>
+                      Proses Cepat via Virtual Account Midtrans
+                    </Text>
                   </View>
                   <View>
                     {selectedBank === bank.id && (
-                      <Ionicons name="checkmark-circle" size={24} color="#1E88E5" />
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={24}
+                        color="#1E88E5"
+                      />
                     )}
                   </View>
                 </View>
@@ -452,24 +499,28 @@ const PaymentScreen = () => {
         return (
           <View style={styles.instructionCard}>
             <Text style={styles.instructionTitle}>Informasi Kartu Kredit:</Text>
-            
+
             <TextInput
               style={styles.cardInput}
               placeholder="Nomor Kartu"
               placeholderTextColor="#999"
               value={cardDetails.cardNumber}
-              onChangeText={(text) => setCardDetails({...cardDetails, cardNumber: text})}
+              onChangeText={text =>
+                setCardDetails({ ...cardDetails, cardNumber: text })
+              }
               keyboardType="numeric"
               maxLength={16}
             />
-            
+
             <View style={styles.cardRow}>
               <TextInput
                 style={[styles.cardInput, { flex: 2 }]}
                 placeholder="MM/YY"
                 placeholderTextColor="#999"
                 value={cardDetails.cardExpiry}
-                onChangeText={(text) => setCardDetails({...cardDetails, cardExpiry: text})}
+                onChangeText={text =>
+                  setCardDetails({ ...cardDetails, cardExpiry: text })
+                }
                 maxLength={5}
               />
               <TextInput
@@ -477,21 +528,25 @@ const PaymentScreen = () => {
                 placeholder="CVC"
                 placeholderTextColor="#999"
                 value={cardDetails.cardCVC}
-                onChangeText={(text) => setCardDetails({...cardDetails, cardCVC: text})}
+                onChangeText={text =>
+                  setCardDetails({ ...cardDetails, cardCVC: text })
+                }
                 keyboardType="numeric"
                 maxLength={3}
               />
             </View>
-            
+
             <TextInput
               style={styles.cardInput}
               placeholder="Nama Pemegang Kartu"
               placeholderTextColor="#999"
               value={cardDetails.cardName}
-              onChangeText={(text) => setCardDetails({...cardDetails, cardName: text})}
+              onChangeText={text =>
+                setCardDetails({ ...cardDetails, cardName: text })
+              }
               autoCapitalize="words"
             />
-            
+
             <View style={styles.securityNote}>
               <Ionicons name="lock-closed" size={16} color="#4CAF50" />
               <Text style={styles.securityText}>
@@ -534,10 +589,13 @@ const PaymentScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#1E88E5" barStyle="light-content" />
-      
+
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
           <Ionicons name="arrow-back" size={24} color="#FFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Pembayaran</Text>
@@ -578,20 +636,28 @@ const PaymentScreen = () => {
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Rute</Text>
-            <Text style={styles.summaryValue}>{booking.departure} → {booking.destination}</Text>
+            <Text style={styles.summaryValue}>
+              {booking.departure} → {booking.destination}
+            </Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Tanggal & Waktu</Text>
-            <Text style={styles.summaryValue}>{booking.departureDate} | {booking.departureTime}</Text>
+            <Text style={styles.summaryValue}>
+              {booking.departureDate} | {booking.departureTime}
+            </Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Penumpang</Text>
-            <Text style={styles.summaryValue}>{booking.passengerCount} orang</Text>
+            <Text style={styles.summaryValue}>
+              {booking.passengerCount} orang
+            </Text>
           </View>
           {booking.selectedSeats && booking.selectedSeats.length > 0 && (
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Kursi</Text>
-              <Text style={styles.summaryValue}>{booking.selectedSeats.join(', ')}</Text>
+              <Text style={styles.summaryValue}>
+                {booking.selectedSeats.join(', ')}
+              </Text>
             </View>
           )}
         </View>
@@ -610,20 +676,28 @@ const PaymentScreen = () => {
           <Text style={styles.priceTitle}>Rincian Pembayaran</Text>
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>Subtotal</Text>
-            <Text style={styles.priceValue}>Rp {subtotal.toLocaleString('id-ID')}</Text>
+            <Text style={styles.priceValue}>
+              Rp {subtotal.toLocaleString('id-ID')}
+            </Text>
           </View>
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>Pajak (10%)</Text>
-            <Text style={styles.priceValue}>Rp {tax.toLocaleString('id-ID')}</Text>
+            <Text style={styles.priceValue}>
+              Rp {tax.toLocaleString('id-ID')}
+            </Text>
           </View>
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>Biaya Layanan</Text>
-            <Text style={styles.priceValue}>Rp {serviceFee.toLocaleString('id-ID')}</Text>
+            <Text style={styles.priceValue}>
+              Rp {serviceFee.toLocaleString('id-ID')}
+            </Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total Pembayaran</Text>
-            <Text style={styles.totalValue}>Rp {booking.total.toLocaleString('id-ID')}</Text>
+            <Text style={styles.totalValue}>
+              Rp {booking.total.toLocaleString('id-ID')}
+            </Text>
           </View>
         </View>
 
@@ -634,16 +708,15 @@ const PaymentScreen = () => {
             <Text style={styles.securityTitle}>Pembayaran 100% Aman</Text>
           </View>
           <Text style={styles.securityTextFull}>
-            • Transaksi dienkripsi dengan teknologi SSL{'\n'}
-            • Uang akan ditahan sampai tiket diterbitkan{'\n'}
-            • Garansi uang kembali jika terjadi kendala{'\n'}
-            • Dukungan customer service 24/7
+            • Transaksi dienkripsi dengan teknologi SSL{'\n'}• Uang akan ditahan
+            sampai tiket diterbitkan{'\n'}• Garansi uang kembali jika terjadi
+            kendala{'\n'}• Dukungan customer service 24/7
           </Text>
         </View>
 
         {/* Action Button */}
         <View style={styles.actionContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.payButton, processing && styles.payButtonDisabled]}
             onPress={handlePayment}
             disabled={processing}
@@ -655,11 +728,16 @@ const PaymentScreen = () => {
                 <Text style={styles.payButtonText}>
                   Bayar Rp {booking.total.toLocaleString('id-ID')}
                 </Text>
-                <Ionicons name="lock-closed" size={20} color="#FFF" style={styles.lockIcon} />
+                <Ionicons
+                  name="lock-closed"
+                  size={20}
+                  color="#FFF"
+                  style={styles.lockIcon}
+                />
               </>
             )}
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.saveButton}
             onPress={() => navigation.navigate('MyTickets')}
           >
@@ -679,7 +757,7 @@ const PaymentScreen = () => {
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Scan QR Code</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => setShowQRModal(false)}
                 disabled={processing}
               >
@@ -690,7 +768,9 @@ const PaymentScreen = () => {
               <View style={styles.qrContainer}>
                 <View style={styles.qrPlaceholder}>
                   <Text style={styles.qrText}>QR Code</Text>
-                  <Text style={styles.qrSubtext}>Scan dengan aplikasi e-wallet</Text>
+                  <Text style={styles.qrSubtext}>
+                    Scan dengan aplikasi e-wallet
+                  </Text>
                 </View>
               </View>
               <Text style={styles.modalInstruction}>
@@ -702,7 +782,7 @@ const PaymentScreen = () => {
                   Berlaku selama {formatTime(countdown)}
                 </Text>
               </View>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.doneButton}
                 onPress={() => {
                   setShowQRModal(false);
@@ -720,7 +800,9 @@ const PaymentScreen = () => {
       {/* VA Overlay */}
       {showVAModal && (
         <View style={styles.successOverlay}>
-          <Animated.View style={[styles.successContainer, { opacity: fadeAnim }]}>
+          <Animated.View
+            style={[styles.successContainer, { opacity: fadeAnim }]}
+          >
             <View style={styles.successIcon}>
               <Ionicons name="card" size={80} color="#1E88E5" />
             </View>
@@ -728,24 +810,60 @@ const PaymentScreen = () => {
             <Text style={styles.successMessage}>
               Silakan selesaikan pembayaran ke Virtual Account berikut:
             </Text>
-            
-            <View style={[styles.bankCard, { width: '100%', marginBottom: 20 }]}>
-               <Text style={{ textAlign: 'center', color: '#666', marginBottom: 8 }}>Nomor Virtual Account</Text>
-               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                 <Text style={{ textAlign: 'center', fontSize: 24, fontWeight: 'bold', color: '#333', marginRight: 10 }}>
-                   {currentBooking?.midtrans?.va_numbers?.[0]?.va_number || '-'}
-                 </Text>
-                 <TouchableOpacity onPress={() => copyToClipboard(currentBooking?.midtrans?.va_numbers?.[0]?.va_number || '')}>
-                   <Ionicons name="copy-outline" size={24} color="#1E88E5" />
-                 </TouchableOpacity>
-               </View>
-               <Text style={{ textAlign: 'center', color: '#1E88E5', marginTop: 8, fontWeight: '500' }}>
-                 Bank {currentBooking?.midtrans?.va_numbers?.[0]?.bank?.toUpperCase() || '-'}
-               </Text>
+
+            <View
+              style={[styles.bankCard, { width: '100%', marginBottom: 20 }]}
+            >
+              <Text
+                style={{ textAlign: 'center', color: '#666', marginBottom: 8 }}
+              >
+                Nomor Virtual Account
+              </Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    fontSize: 24,
+                    fontWeight: 'bold',
+                    color: '#333',
+                    marginRight: 10,
+                  }}
+                >
+                  {currentBooking?.midtrans?.va_numbers?.[0]?.va_number || '-'}
+                </Text>
+                <TouchableOpacity
+                  onPress={() =>
+                    copyToClipboard(
+                      currentBooking?.midtrans?.va_numbers?.[0]?.va_number ||
+                        '',
+                    )
+                  }
+                >
+                  <Ionicons name="copy-outline" size={24} color="#1E88E5" />
+                </TouchableOpacity>
+              </View>
+              <Text
+                style={{
+                  textAlign: 'center',
+                  color: '#1E88E5',
+                  marginTop: 8,
+                  fontWeight: '500',
+                }}
+              >
+                Bank{' '}
+                {currentBooking?.midtrans?.va_numbers?.[0]?.bank?.toUpperCase() ||
+                  '-'}
+              </Text>
             </View>
 
             <View style={styles.successActions}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.viewTicketButton}
                 onPress={handleVerify}
                 disabled={processing}
@@ -753,11 +871,13 @@ const PaymentScreen = () => {
                 {processing ? (
                   <ActivityIndicator color="#FFF" />
                 ) : (
-                  <Text style={styles.viewTicketText}>Cek Status Pembayaran</Text>
+                  <Text style={styles.viewTicketText}>
+                    Cek Status Pembayaran
+                  </Text>
                 )}
               </TouchableOpacity>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.backHomeButton}
                 onPress={() => {
                   setShowVAModal(false);
@@ -774,20 +894,111 @@ const PaymentScreen = () => {
         </View>
       )}
 
+      {/* E-Wallet / QRIS Overlay */}
+      {showEwalletModal && (
+        <View style={styles.successOverlay}>
+          <Animated.View
+            style={[styles.successContainer, { opacity: fadeAnim }]}
+          >
+            <View style={styles.successIcon}>
+              <FontAwesome5 name="qrcode" size={64} color="#FF9800" />
+            </View>
+            <Text style={styles.successTitle}>Selesaikan Pembayaran</Text>
+            <Text style={styles.successMessage}>
+              Scan QR code berikut dengan aplikasi e-wallet (GoPay, OVO, DANA,
+              ShopeePay) atau aplikasi bank yang mendukung QRIS.
+            </Text>
+
+            {currentBooking?.qr_code_url ? (
+              <View style={styles.qrImageWrapper}>
+                <Image
+                  source={{ uri: currentBooking.qr_code_url }}
+                  style={styles.qrImage}
+                  resizeMode="contain"
+                />
+              </View>
+            ) : (
+              <View style={styles.qrImageWrapper}>
+                <ActivityIndicator size="large" color="#FF9800" />
+                <Text style={styles.qrSubtext}>Menyiapkan QR code...</Text>
+              </View>
+            )}
+
+            <Text style={styles.ewalletAmount}>
+              Rp {totalAmount.toLocaleString('id-ID')}
+            </Text>
+
+            <View style={styles.timerModal}>
+              <Ionicons name="time-outline" size={20} color="#FF9800" />
+              <Text style={styles.timerModalText}>
+                Berlaku selama {formatTime(countdown)}
+              </Text>
+            </View>
+
+            <View style={styles.successActions}>
+              {currentBooking?.deeplink_url && (
+                <TouchableOpacity
+                  style={[
+                    styles.viewTicketButton,
+                    { backgroundColor: '#FF9800' },
+                  ]}
+                  onPress={() => Linking.openURL(currentBooking.deeplink_url)}
+                  disabled={processing}
+                >
+                  <Text style={styles.viewTicketText}>
+                    Buka Aplikasi E-Wallet
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                style={styles.viewTicketButton}
+                onPress={handleVerify}
+                disabled={processing}
+              >
+                {processing ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <Text style={styles.viewTicketText}>
+                    Cek Status Pembayaran
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.backHomeButton}
+                onPress={() => {
+                  setShowEwalletModal(false);
+                  navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'PassengerHome' }],
+                  });
+                }}
+              >
+                <Text style={styles.backHomeText}>Tutup</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </View>
+      )}
+
       {/* Success Overlay */}
       {showSuccess && (
         <View style={styles.successOverlay}>
-          <Animated.View style={[styles.successContainer, { opacity: fadeAnim }]}>
+          <Animated.View
+            style={[styles.successContainer, { opacity: fadeAnim }]}
+          >
             <View style={styles.successIcon}>
               <Ionicons name="checkmark-circle" size={80} color="#4CAF50" />
             </View>
             <Text style={styles.successTitle}>Pembayaran Berhasil!</Text>
             <Text style={styles.successMessage}>
-              Tiket Anda telah diterbitkan. Anda dapat melihatnya di menu 'Tiket Saya'.
+              Tiket Anda telah diterbitkan. Anda dapat melihatnya di menu 'Tiket
+              Saya'.
             </Text>
-            
+
             <View style={styles.successActions}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.viewTicketButton}
                 onPress={() => {
                   setShowSuccess(false);
@@ -795,9 +1006,9 @@ const PaymentScreen = () => {
                     index: 1,
                     routes: [
                       { name: 'PassengerHome' },
-                      { 
-                        name: 'TicketDetail', 
-                        params: { ticket: { id: bookingId } } 
+                      {
+                        name: 'TicketDetail',
+                        params: { ticket: { id: bookingId } },
                       },
                     ],
                   });
@@ -806,7 +1017,7 @@ const PaymentScreen = () => {
                 <Text style={styles.viewTicketText}>Lihat Tiket</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.backHomeButton}
                 onPress={() => {
                   setShowSuccess(false);
@@ -1332,6 +1543,30 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginTop: 8,
+  },
+  qrImageWrapper: {
+    width: 220,
+    height: 220,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EEE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginVertical: 16,
+    padding: 8,
+  },
+  qrImage: {
+    width: '100%',
+    height: '100%',
+  },
+  ewalletAmount: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 8,
   },
   modalInstruction: {
     fontSize: 14,
