@@ -34,9 +34,12 @@ const C = {
 export default function FAQScreen({ navigation }) {
   const handleContactWhatsApp = () => {
     const phoneNumber = '6281234567890';
-    const message = 'Halo Admin Bus Ticketing, saya butuh bantuan mengenai tiket saya...';
-    const url = `whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(message)}`;
-    
+    const message =
+      'Halo Admin Bus Ticketing, saya butuh bantuan mengenai tiket saya...';
+    const url = `whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(
+      message,
+    )}`;
+
     Linking.openURL(url).catch(() => {
       alert('Pastikan WhatsApp sudah terinstal di perangkat Anda');
     });
@@ -45,38 +48,52 @@ export default function FAQScreen({ navigation }) {
   const faqs = [
     {
       question: 'Bagaimana cara memesan tiket bus?',
-      answer: 'Anda dapat mencari rute dan tanggal keberangkatan pada halaman utama, pilih bus yang tersedia, pilih kursi, dan lakukan pembayaran.'
+      answer:
+        'Anda dapat mencari rute dan tanggal keberangkatan pada halaman utama, pilih bus yang tersedia, pilih kursi, dan lakukan pembayaran.',
     },
     {
       question: 'Metode pembayaran apa saja yang didukung?',
-      answer: 'Kami mendukung pembayaran melalui E-Wallet (OVO, GoPay, Dana) dan Cash (Bayar di tempat).'
+      answer:
+        'Kami mendukung pembayaran melalui Transfer Bank (BCA, Mandiri, BRI), E-Wallet (GoPay, OVO, DANA, ShopeePay), dan Bayar di Tempat (cash ke admin/petugas).',
+    },
+    {
+      question: 'Bagaimana cara bayar di tempat?',
+      answer:
+        'Pilih metode "Bayar di Tempat" saat pembayaran. Pemesanan Anda akan dikonfirmasi oleh admin setelah Anda membayar kepada petugas di terminal atau saat naik bus. Setelah dikonfirmasi, tiket Anda akan aktif.',
     },
     {
       question: 'Apakah saya bisa membatalkan tiket?',
-      answer: 'Ya, Anda bisa membatalkan tiket melalui menu Tiket Saya, pilih tiket, lalu tekan tombol Batalkan Tiket. Harap cantumkan alasan pembatalan.'
+      answer:
+        'Ya, Anda bisa membatalkan tiket melalui menu Tiket Saya, pilih tiket, lalu tekan tombol Batalkan Tiket. Harap cantumkan alasan pembatalan.',
     },
     {
       question: 'Bagaimana jika saya ingin mengubah jadwal?',
-      answer: 'Saat ini perubahan jadwal secara langsung belum didukung. Anda dapat membatalkan tiket sebelumnya dan memesan tiket baru.'
-    }
+      answer:
+        'Saat ini perubahan jadwal secara langsung belum didukung. Anda dapat membatalkan tiket sebelumnya dan memesan tiket baru.',
+    },
   ];
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
           <Icon name="arrow-back" size={24} color={C.headerText} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Bantuan (FAQ)</Text>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.content}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.faqSection}>
-          <Text style={styles.sectionTitle}>Pertanyaan yang Sering Diajukan</Text>
+          <Text style={styles.sectionTitle}>
+            Pertanyaan yang Sering Diajukan
+          </Text>
           {faqs.map((faq, index) => (
             <View key={index} style={styles.faqCard}>
               <View style={styles.faqIconWrap}>
@@ -98,10 +115,14 @@ export default function FAQScreen({ navigation }) {
             <Text style={styles.contactTitle}>Masih butuh bantuan?</Text>
           </View>
           <Text style={styles.contactDesc}>
-            Tim dukungan kami siap membantu Anda. Hubungi kami melalui WhatsApp untuk respon yang lebih cepat.
+            Tim dukungan kami siap membantu Anda. Hubungi kami melalui WhatsApp
+            untuk respon yang lebih cepat.
           </Text>
-          
-          <TouchableOpacity style={styles.waButton} onPress={handleContactWhatsApp}>
+
+          <TouchableOpacity
+            style={styles.waButton}
+            onPress={handleContactWhatsApp}
+          >
             <FontAwesome5 name="whatsapp" size={22} color={C.white} />
             <Text style={styles.waButtonText}>Hubungi via WhatsApp</Text>
           </TouchableOpacity>

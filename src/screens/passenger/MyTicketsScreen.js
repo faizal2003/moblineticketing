@@ -69,13 +69,13 @@ const { width } = Dimensions.get('window');
 const MyTicketsScreen = () => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
-  
+
   const bookingHistory = useSelector(selectBookingHistory);
   const historyLoading = useSelector(selectHistoryLoading);
   const historyError = useSelector(selectHistoryError);
   const loading = useSelector(selectLoading);
   const error = useSelector(selectError);
-  
+
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('all');
   const [selectedTicket, setSelectedTicket] = useState(null);
@@ -97,7 +97,7 @@ const MyTicketsScreen = () => {
     useCallback(() => {
       loadTickets();
       return () => {};
-    }, [])
+    }, []),
   );
 
   useEffect(() => {
@@ -127,77 +127,114 @@ const MyTicketsScreen = () => {
     });
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = status => {
     switch (status) {
-      case 'confirmed': return C.green;
-      case 'pending': return C.amber;
-      case 'cancelled': return C.red;
-      case 'completed': return C.primary;
-      case 'expired': return C.textMuted;
-      default: return C.textMuted;
+      case 'confirmed':
+        return C.green;
+      case 'pending':
+        return C.amber;
+      case 'cancelled':
+        return C.red;
+      case 'completed':
+        return C.primary;
+      case 'expired':
+        return C.textMuted;
+      default:
+        return C.textMuted;
     }
   };
 
-  const getStatusText = (status) => {
+  const getStatusText = status => {
     switch (status) {
-      case 'confirmed': return 'Terkonfirmasi';
-      case 'pending': return 'Menunggu Pembayaran';
-      case 'cancelled': return 'Dibatalkan';
-      case 'completed': return 'Selesai';
-      case 'expired': return 'Kadaluarsa';
-      default: return status;
+      case 'confirmed':
+        return 'Terkonfirmasi';
+      case 'pending':
+        return 'Menunggu Pembayaran';
+      case 'cancelled':
+        return 'Dibatalkan';
+      case 'completed':
+        return 'Selesai';
+      case 'expired':
+        return 'Kadaluarsa';
+      default:
+        return status;
     }
   };
 
   const getFilteredTickets = () => {
     if (!bookingHistory || !Array.isArray(bookingHistory)) return [];
-    
+
     let filtered = [...bookingHistory];
-    
+
     if (filter !== 'all') {
       switch (filter) {
         case 'upcoming':
-          filtered = filtered.filter(ticket => 
-            ticket.booking_status === 'confirmed' || ticket.booking_status === 'pending'
+          filtered = filtered.filter(
+            ticket =>
+              ticket.booking_status === 'confirmed' ||
+              ticket.booking_status === 'pending',
           );
           break;
         case 'past':
-          filtered = filtered.filter(ticket => ticket.booking_status === 'completed');
+          filtered = filtered.filter(
+            ticket => ticket.booking_status === 'completed',
+          );
           break;
         case 'cancelled':
-          filtered = filtered.filter(ticket => ticket.booking_status === 'cancelled');
+          filtered = filtered.filter(
+            ticket => ticket.booking_status === 'cancelled',
+          );
           break;
       }
     }
-    
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(ticket =>
-        ticket.booking_code?.toLowerCase().includes(query) ||
-        ticket.schedule?.bus_name?.toLowerCase().includes(query) ||
-        ticket.schedule?.departure_city?.toLowerCase().includes(query) ||
-        ticket.schedule?.arrival_city?.toLowerCase().includes(query)
+      filtered = filtered.filter(
+        ticket =>
+          ticket.booking_code?.toLowerCase().includes(query) ||
+          ticket.schedule?.bus_name?.toLowerCase().includes(query) ||
+          ticket.schedule?.departure_city?.toLowerCase().includes(query) ||
+          ticket.schedule?.arrival_city?.toLowerCase().includes(query),
       );
     }
-    
+
     return filtered.sort((a, b) => {
-      const dateA = a.created_at ? new Date(a.created_at.replace(' ', 'T')) : new Date(0);
-      const dateB = b.created_at ? new Date(b.created_at.replace(' ', 'T')) : new Date(0);
+      const dateA = a.created_at
+        ? new Date(a.created_at.replace(' ', 'T'))
+        : new Date(0);
+      const dateB = b.created_at
+        ? new Date(b.created_at.replace(' ', 'T'))
+        : new Date(0);
       return dateB.getTime() - dateA.getTime();
     });
   };
 
-  const formatShortDate = (dateString) => {
+  const formatShortDate = dateString => {
     if (!dateString) return '-';
     try {
-      const date = parseISO(dateString);
+      // Backend returns dates like "2024-06-18 10:30:00"
+      // Replace space with T to make it ISO compliant
+      const isoString = dateString.includes('T')
+        ? dateString
+        : dateString.replace(' ', 'T');
+      const date = parseISO(isoString);
       return format(date, 'd MMM yyyy', { locale: id });
     } catch (error) {
+      // Fallback to basic parsing
+      try {
+        const date = new Date(dateString);
+        if (!isNaN(date.getTime())) {
+          return format(date, 'd MMM yyyy', { locale: id });
+        }
+      } catch {
+        return dateString;
+      }
       return dateString;
     }
   };
 
-  const handleTicketPress = (ticket) => {
+  const handleTicketPress = ticket => {
     dispatch(fetchBookingDetail(ticket.id))
       .unwrap()
       .then(() => {
@@ -215,11 +252,13 @@ const MyTicketsScreen = () => {
     }
 
     try {
-      await dispatch(cancelBooking({ 
-        bookingId: selectedTicket.id, 
-        reason: cancellationReason 
-      })).unwrap();
-      
+      await dispatch(
+        cancelBooking({
+          bookingId: selectedTicket.id,
+          reason: cancellationReason,
+        }),
+      ).unwrap();
+
       setShowCancelModal(false);
       setSelectedTicket(null);
       setCancellationReason('');
@@ -236,10 +275,8 @@ const MyTicketsScreen = () => {
         <Ionicons name="receipt-outline" size={64} color={C.textMuted} />
       </View>
       <Text style={styles.emptyTitle}>Tidak ada tiket</Text>
-      <Text style={styles.emptyText}>
-        Anda belum memiliki tiket aktif
-      </Text>
-      <TouchableOpacity 
+      <Text style={styles.emptyText}>Anda belum memiliki tiket aktif</Text>
+      <TouchableOpacity
         style={styles.browseButton}
         onPress={() => navigation.navigate('SearchBus')}
       >
@@ -250,7 +287,7 @@ const MyTicketsScreen = () => {
 
   const renderTicketCard = ({ item }) => (
     <Animated.View style={{ opacity: fadeAnim }}>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.ticketCard}
         onPress={() => handleTicketPress(item)}
         onLongPress={() => {
@@ -262,8 +299,15 @@ const MyTicketsScreen = () => {
         <View style={styles.ticketHeader}>
           <View style={styles.ticketIdContainer}>
             <Text style={styles.ticketId}>{item.booking_code}</Text>
-            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.booking_status) }]}>
-              <Text style={styles.statusText}>{getStatusText(item.booking_status)}</Text>
+            <View
+              style={[
+                styles.statusBadge,
+                { backgroundColor: getStatusColor(item.booking_status) },
+              ]}
+            >
+              <Text style={styles.statusText}>
+                {getStatusText(item.booking_status)}
+              </Text>
             </View>
           </View>
           <Text style={styles.bookingDate}>
@@ -280,11 +324,18 @@ const MyTicketsScreen = () => {
           <View style={styles.routeDetails}>
             <View style={styles.routeStop}>
               <View>
-                <Text style={styles.cityName}>{item.schedule?.departure_city}</Text>
+                <Text style={styles.cityName}>
+                  {item.schedule?.departure_city}
+                </Text>
                 <Text style={styles.terminalName}>Terminal Keberangkatan</Text>
               </View>
               <Text style={styles.timeText}>
-                {item.schedule?.departure_time ? new Date(item.schedule.departure_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                {item.schedule?.departure_time
+                  ? new Date(item.schedule.departure_time).toLocaleTimeString(
+                      [],
+                      { hour: '2-digit', minute: '2-digit' },
+                    )
+                  : '--:--'}
               </Text>
             </View>
             <View style={styles.durationContainer}>
@@ -297,11 +348,18 @@ const MyTicketsScreen = () => {
             </View>
             <View style={styles.routeStop}>
               <View>
-                <Text style={styles.cityName}>{item.schedule?.arrival_city}</Text>
+                <Text style={styles.cityName}>
+                  {item.schedule?.arrival_city}
+                </Text>
                 <Text style={styles.terminalName}>Terminal Kedatangan</Text>
               </View>
               <Text style={styles.timeText}>
-                {item.schedule?.arrival_time ? new Date(item.schedule.arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                {item.schedule?.arrival_time
+                  ? new Date(item.schedule.arrival_time).toLocaleTimeString(
+                      [],
+                      { hour: '2-digit', minute: '2-digit' },
+                    )
+                  : '--:--'}
               </Text>
             </View>
           </View>
@@ -314,14 +372,18 @@ const MyTicketsScreen = () => {
                 <Ionicons name="bus-outline" size={14} color={C.primary} />
               </View>
               <Text style={styles.detailLabel}>Bus</Text>
-              <Text style={styles.detailValue} numberOfLines={1}>{item.schedule?.bus_name || 'Bus'}</Text>
+              <Text style={styles.detailValue} numberOfLines={1}>
+                {item.schedule?.bus_name || 'Bus'}
+              </Text>
             </View>
             <View style={styles.detailItem}>
               <View style={styles.detailIconWrap}>
                 <Ionicons name="people-outline" size={14} color={C.primary} />
               </View>
               <Text style={styles.detailLabel}>Penumpang</Text>
-              <Text style={styles.detailValue}>{item.total_passengers || 1}</Text>
+              <Text style={styles.detailValue}>
+                {item.total_passengers || 1}
+              </Text>
             </View>
           </View>
           <View style={styles.detailRow}>
@@ -331,7 +393,9 @@ const MyTicketsScreen = () => {
               </View>
               <Text style={styles.detailLabel}>Berangkat</Text>
               <Text style={styles.detailValue}>
-                {item.schedule?.departure_time ? formatShortDate(item.schedule.departure_time) : '-'}
+                {item.schedule?.departure_time
+                  ? formatShortDate(item.schedule.departure_time)
+                  : '-'}
               </Text>
             </View>
             <View style={styles.detailItem}>
@@ -355,7 +419,7 @@ const MyTicketsScreen = () => {
           </View>
           <View style={styles.actionButtons}>
             {item.booking_status === 'confirmed' && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.viewButton}
                 onPress={() => handleTicketPress(item)}
               >
@@ -364,12 +428,14 @@ const MyTicketsScreen = () => {
               </TouchableOpacity>
             )}
             {item.booking_status === 'pending' && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.payButton}
-                onPress={() => navigation.navigate('Payment', {
-                  bookingId: item.id,
-                  totalAmount: parseFloat(item.total_price),
-                })}
+                onPress={() =>
+                  navigation.navigate('Payment', {
+                    bookingId: item.id,
+                    totalAmount: parseFloat(item.total_price),
+                  })
+                }
               >
                 <Text style={styles.payButtonText}>Bayar</Text>
               </TouchableOpacity>
@@ -380,7 +446,7 @@ const MyTicketsScreen = () => {
     </Animated.View>
   );
 
-  const renderFilterButton = (filterItem) => (
+  const renderFilterButton = filterItem => (
     <TouchableOpacity
       key={filterItem.id}
       style={[
@@ -392,15 +458,17 @@ const MyTicketsScreen = () => {
         setShowFilterModal(false);
       }}
     >
-      <Ionicons 
-        name={filterItem.icon} 
-        size={20} 
-        color={filter === filterItem.id ? C.primary : C.textSub} 
+      <Ionicons
+        name={filterItem.icon}
+        size={20}
+        color={filter === filterItem.id ? C.primary : C.textSub}
       />
-      <Text style={[
-        styles.filterButtonText,
-        filter === filterItem.id && styles.filterButtonTextActive,
-      ]}>
+      <Text
+        style={[
+          styles.filterButtonText,
+          filter === filterItem.id && styles.filterButtonTextActive,
+        ]}
+      >
         {filterItem.label}
       </Text>
     </TouchableOpacity>
@@ -417,14 +485,18 @@ const MyTicketsScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.headerBg} translucent={false} />
-      
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={C.headerBg}
+        translucent={false}
+      />
+
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.headerTitle}>Tiket Saya</Text>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.filterIconButton}
             onPress={() => setShowFilterModal(true)}
           >
@@ -434,7 +506,12 @@ const MyTicketsScreen = () => {
       </View>
 
       <View style={styles.searchContainer}>
-        <Ionicons name="search" size={18} color={C.textSub} style={styles.searchIcon} />
+        <Ionicons
+          name="search"
+          size={18}
+          color={C.textSub}
+          style={styles.searchIcon}
+        />
         <TextInput
           style={styles.searchInput}
           placeholder="Cari tiket..."
@@ -459,7 +536,11 @@ const MyTicketsScreen = () => {
       <FlatList
         data={getFilteredTickets()}
         renderItem={renderTicketCard}
-        keyExtractor={(item, index) => item.id?.toString() || item.booking_code?.toString() || index.toString()}
+        keyExtractor={(item, index) =>
+          item.id?.toString() ||
+          item.booking_code?.toString() ||
+          index.toString()
+        }
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -507,20 +588,23 @@ const MyTicketsScreen = () => {
         transparent={true}
         onRequestClose={() => setShowActionModal(false)}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.actionModalOverlay}
           activeOpacity={1}
           onPress={() => setShowActionModal(false)}
         >
           <View style={styles.actionModalContainer}>
             <View style={styles.actionModalHeader}>
-              <Text style={styles.actionModalTitle}>Tiket {selectedTicket?.bookingCode}</Text>
+              <Text style={styles.actionModalTitle}>
+                Tiket {selectedTicket?.bookingCode}
+              </Text>
               <Text style={styles.actionModalSubtitle}>
-                {selectedTicket?.busName} • {selectedTicket?.departure} → {selectedTicket?.destination}
+                {selectedTicket?.busName} • {selectedTicket?.departure} →{' '}
+                {selectedTicket?.destination}
               </Text>
             </View>
             <View style={styles.actionButtonsContainer}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.actionButton}
                 onPress={() => {
                   setShowActionModal(false);
@@ -530,9 +614,9 @@ const MyTicketsScreen = () => {
                 <Ionicons name="eye-outline" size={22} color={C.primary} />
                 <Text style={styles.actionButtonText}>Lihat Detail</Text>
               </TouchableOpacity>
-              
+
               {selectedTicket?.status === 'confirmed' && (
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.actionButton}
                   onPress={() => {
                     setShowActionModal(false);
@@ -543,21 +627,26 @@ const MyTicketsScreen = () => {
                   <Text style={styles.actionButtonText}>Download</Text>
                 </TouchableOpacity>
               )}
-              
-              {(selectedTicket?.status === 'confirmed' || selectedTicket?.status === 'pending') && (
-                <TouchableOpacity 
+
+              {(selectedTicket?.status === 'confirmed' ||
+                selectedTicket?.status === 'pending') && (
+                <TouchableOpacity
                   style={styles.actionButton}
                   onPress={() => {
                     setShowActionModal(false);
                     setShowCancelModal(true);
                   }}
                 >
-                  <Ionicons name="close-circle-outline" size={22} color={C.red} />
+                  <Ionicons
+                    name="close-circle-outline"
+                    size={22}
+                    color={C.red}
+                  />
                   <Text style={styles.actionButtonText}>Batalkan</Text>
                 </TouchableOpacity>
               )}
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={[styles.actionButton, styles.cancelActionButton]}
                 onPress={() => setShowActionModal(false)}
               >
@@ -582,7 +671,7 @@ const MyTicketsScreen = () => {
                 Apakah Anda yakin ingin membatalkan tiket ini?
               </Text>
             </View>
-            
+
             <View style={styles.cancelModalContent}>
               <Text style={styles.inputLabel}>Alasan Pembatalan</Text>
               <View style={styles.inputContainer}>
@@ -597,13 +686,14 @@ const MyTicketsScreen = () => {
                   textAlignVertical="top"
                 />
               </View>
-              
+
               <Text style={styles.refundInfo}>
-                Dana akan dikembalikan dalam 3-5 hari kerja ke metode pembayaran awal.
+                Dana akan dikembalikan dalam 3-5 hari kerja ke metode pembayaran
+                awal.
               </Text>
-              
+
               <View style={styles.cancelModalActions}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.modalButton, styles.cancelModalButton]}
                   onPress={() => {
                     setShowCancelModal(false);
@@ -612,8 +702,8 @@ const MyTicketsScreen = () => {
                 >
                   <Text style={styles.cancelModalButtonText}>Batal</Text>
                 </TouchableOpacity>
-                
-                <TouchableOpacity 
+
+                <TouchableOpacity
                   style={[styles.modalButton, styles.confirmCancelButton]}
                   onPress={handleCancelTicket}
                   disabled={loading}
@@ -621,7 +711,9 @@ const MyTicketsScreen = () => {
                   {loading ? (
                     <ActivityIndicator color={C.white} />
                   ) : (
-                    <Text style={styles.confirmCancelButtonText}>Ya, Batalkan</Text>
+                    <Text style={styles.confirmCancelButtonText}>
+                      Ya, Batalkan
+                    </Text>
                   )}
                 </TouchableOpacity>
               </View>

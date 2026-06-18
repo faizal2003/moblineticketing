@@ -51,7 +51,8 @@ const bookingAPI = {
 
   fetchBookingDetail: bookingId => api.get(`/bookings/${bookingId}`),
 
-  cancelBooking: bookingId => api.delete(`/bookings/${bookingId}`),
+  cancelBooking: ({ bookingId, reason }) =>
+    api.delete(`/bookings/${bookingId}`, { data: { reason } }),
 
   downloadTicket: ticketId => api.get(`/tickets/${ticketId}/qr`),
 
@@ -108,8 +109,9 @@ export const fetchBookingDetail = createBookingThunk(
   bookingId => bookingAPI.fetchBookingDetail(bookingId),
 );
 
-export const cancelBooking = createBookingThunk('cancelBooking', bookingId =>
-  bookingAPI.cancelBooking(bookingId),
+export const cancelBooking = createBookingThunk(
+  'cancelBooking',
+  ({ bookingId, reason }) => bookingAPI.cancelBooking({ bookingId, reason }),
 );
 
 export const downloadTicket = createAsyncThunk(

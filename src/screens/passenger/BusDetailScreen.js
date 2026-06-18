@@ -18,6 +18,8 @@ import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import Entypo from 'react-native-vector-icons/Entypo';
 
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useSelector } from 'react-redux';
+import { selectSearchParams } from '../../store/slices/bookingSlice';
 import { busService } from '../../services/busService';
 
 // ─── Color Tokens ─────────────────────────────────────────────────────────────
@@ -47,7 +49,18 @@ const C = {
 const BusDetailScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { busId, scheduleId, busName, departure, destination, departureTime, arrivalTime, price } = route.params || {};
+  const searchParams = useSelector(selectSearchParams);
+
+  const {
+    busId,
+    scheduleId,
+    busName,
+    departure,
+    destination,
+    departureTime,
+    arrivalTime,
+    price,
+  } = route.params || {};
 
   const [loading, setLoading] = useState(false);
   const [busDetails, setBusDetails] = useState({
@@ -80,8 +93,9 @@ const BusDetailScreen = () => {
       setLoading(true);
       const response = await busService.getBusDetails(busId);
       const data = response.data.data.bus;
-      
-      const schedule = data.schedules.find(s => s.id === scheduleId) || data.schedules[0];
+
+      const schedule =
+        data.schedules.find(s => s.id === scheduleId) || data.schedules[0];
 
       setBusDetails({
         ...busDetails,
@@ -91,10 +105,22 @@ const BusDetailScreen = () => {
         facilities: data.facilities || [],
         totalSeats: data.total_seats,
         availableSeats: schedule ? schedule.available_seats : data.total_seats,
-        departureTime: schedule ? new Date(schedule.departure_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : busDetails.departureTime,
-        arrivalTime: schedule ? new Date(schedule.arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : busDetails.arrivalTime,
+        departureTime: schedule
+          ? new Date(schedule.departure_time).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+          : busDetails.departureTime,
+        arrivalTime: schedule
+          ? new Date(schedule.arrival_time).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+          : busDetails.arrivalTime,
         price: schedule ? schedule.price : busDetails.price,
-        duration: schedule ? calculateDuration(schedule.departure_time, schedule.arrival_time) : '4 jam',
+        duration: schedule
+          ? calculateDuration(schedule.departure_time, schedule.arrival_time)
+          : '4 jam',
       });
     } catch (error) {
       console.error('Error fetching bus details:', error);
@@ -111,6 +137,9 @@ const BusDetailScreen = () => {
   };
 
   const handleBookNow = () => {
+    // Get passenger count from Redux searchParams
+    const passengerCount = searchParams?.passengers || 1;
+
     navigation.navigate('SeatSelection', {
       busId: busId,
       scheduleId: scheduleId,
@@ -121,6 +150,7 @@ const BusDetailScreen = () => {
       price: busDetails.price,
       totalSeats: busDetails.totalSeats,
       availableSeats: busDetails.availableSeats,
+      passengerCount: passengerCount,
     });
   };
 
@@ -153,29 +183,41 @@ const BusDetailScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.headerBg} translucent={false} />
-      
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={C.headerBg}
+        translucent={false}
+      />
+
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
           <Ionicons name="arrow-back" size={24} color={C.headerText} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Detail Bus</Text>
         <View style={styles.headerRight} />
       </View>
 
-      <ScrollView 
+      <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         {busDetails.image && (
-          <Image 
-            source={{ uri: busDetails.image }} 
-            style={styles.heroImage} 
-            resizeMode="cover" 
+          <Image
+            source={{ uri: busDetails.image }}
+            style={styles.heroImage}
+            resizeMode="cover"
           />
         )}
 
-        <View style={[styles.busInfoCard, busDetails.image && styles.busInfoCardOverlap]}>
+        <View
+          style={[
+            styles.busInfoCard,
+            busDetails.image && styles.busInfoCardOverlap,
+          ]}
+        >
           <View style={styles.busHeader}>
             <View style={styles.busIconContainer}>
               <Ionicons name="bus" size={30} color={C.primary} />
@@ -190,7 +232,9 @@ const BusDetailScreen = () => {
             <View style={styles.routeTimeline}>
               <View style={styles.timelineDot} />
               <View style={styles.timelineLine} />
-              <View style={[styles.timelineDot, styles.timelineDotDestination]} />
+              <View
+                style={[styles.timelineDot, styles.timelineDotDestination]}
+              />
             </View>
             <View style={styles.routeDetails}>
               <View style={styles.routeStop}>
@@ -204,7 +248,9 @@ const BusDetailScreen = () => {
                 </View>
               </View>
               <View style={styles.routeStop}>
-                <Text style={[styles.routeCity, styles.destinationCity]}>{busDetails.destination}</Text>
+                <Text style={[styles.routeCity, styles.destinationCity]}>
+                  {busDetails.destination}
+                </Text>
                 <Text style={styles.routeTime}>{busDetails.arrivalTime}</Text>
               </View>
             </View>
@@ -218,9 +264,15 @@ const BusDetailScreen = () => {
             </View>
             <View style={styles.seatDivider} />
             <View style={styles.seatItem}>
-              <Ionicons name="checkmark-circle-outline" size={18} color={C.green} />
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={18}
+                color={C.green}
+              />
               <Text style={styles.seatLabel}>Tersedia</Text>
-              <Text style={[styles.seatValue, styles.availableSeats]}>{busDetails.availableSeats}</Text>
+              <Text style={[styles.seatValue, styles.availableSeats]}>
+                {busDetails.availableSeats}
+              </Text>
             </View>
             <View style={styles.seatDivider} />
             <View style={styles.seatItem}>
@@ -248,7 +300,9 @@ const BusDetailScreen = () => {
         <View style={styles.priceCard}>
           <View>
             <Text style={styles.priceLabel}>Harga per orang</Text>
-            <Text style={styles.priceValue}>Rp {busDetails.price.toLocaleString('id-ID')}</Text>
+            <Text style={styles.priceValue}>
+              Rp {busDetails.price.toLocaleString('id-ID')}
+            </Text>
           </View>
           <TouchableOpacity style={styles.bookButton} onPress={handleBookNow}>
             <Text style={styles.bookButtonText}>Pilih Kursi</Text>
@@ -272,7 +326,9 @@ const BusDetailScreen = () => {
           </View>
           <View style={styles.contactInfo}>
             <Text style={styles.contactTitle}>Butuh Bantuan?</Text>
-            <Text style={styles.contactText}>Hubungi customer service kami</Text>
+            <Text style={styles.contactText}>
+              Hubungi customer service kami
+            </Text>
           </View>
           <TouchableOpacity style={styles.contactButton}>
             <Text style={styles.contactButtonText}>Hubungi</Text>

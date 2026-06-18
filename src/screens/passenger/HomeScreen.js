@@ -49,7 +49,7 @@ const C = {
 
 export default function PassengerHome({ navigation }) {
   const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth);
+  const { user } = useSelector(state => state.auth);
 
   const [searchParams, setSearchParams] = useState({
     origin: '',
@@ -79,10 +79,10 @@ export default function PassengerHome({ navigation }) {
   };
 
   const getFilteredOrigins = () => {
-    const origins = [...new Set(availableRoutes.map((r) => r.origin_city))];
+    const origins = [...new Set(availableRoutes.map(r => r.origin_city))];
     if (!searchParams.origin) return origins;
-    return origins.filter((c) =>
-      c.toLowerCase().includes(searchParams.origin.toLowerCase())
+    return origins.filter(c =>
+      c.toLowerCase().includes(searchParams.origin.toLowerCase()),
     );
   };
 
@@ -90,14 +90,13 @@ export default function PassengerHome({ navigation }) {
     let destinations = availableRoutes;
     if (searchParams.origin) {
       destinations = destinations.filter(
-        (r) =>
-          r.origin_city.toLowerCase() === searchParams.origin.toLowerCase()
+        r => r.origin_city.toLowerCase() === searchParams.origin.toLowerCase(),
       );
     }
-    const unique = [...new Set(destinations.map((r) => r.destination_city))];
+    const unique = [...new Set(destinations.map(r => r.destination_city))];
     if (!searchParams.destination) return unique;
-    return unique.filter((c) =>
-      c.toLowerCase().includes(searchParams.destination.toLowerCase())
+    return unique.filter(c =>
+      c.toLowerCase().includes(searchParams.destination.toLowerCase()),
     );
   };
 
@@ -149,7 +148,7 @@ export default function PassengerHome({ navigation }) {
       } else {
         Alert.alert(
           'Tidak Ditemukan',
-          'Tidak ada bus yang tersedia untuk rute dan tanggal tersebut.'
+          'Tidak ada bus yang tersedia untuk rute dan tanggal tersebut.',
         );
       }
     } catch (error) {
@@ -160,7 +159,7 @@ export default function PassengerHome({ navigation }) {
     }
   };
 
-  const handleQuickRoute = async (item) => {
+  const handleQuickRoute = async item => {
     setIsSearching(true);
     try {
       const params = {
@@ -175,7 +174,10 @@ export default function PassengerHome({ navigation }) {
       if (result.data && result.data.length > 0) {
         navigation.navigate('BusList');
       } else {
-        Alert.alert('Tidak Ditemukan', 'Tidak ada bus tersedia untuk rute ini.');
+        Alert.alert(
+          'Tidak Ditemukan',
+          'Tidak ada bus tersedia untuk rute ini.',
+        );
       }
     } catch {
       Alert.alert('Gagal', 'Tidak dapat mencari bus.');
@@ -243,18 +245,22 @@ export default function PassengerHome({ navigation }) {
 
         {/* ── Search Card ── */}
         <View style={styles.searchCard}>
-
           {/* Origin field */}
           <View style={{ zIndex: 20 }}>
             <Text style={styles.fieldLabel}>DARI</Text>
             <View style={styles.inputRow}>
-              <Icon name="trip-origin" size={18} color={C.primary} style={styles.inputIcon} />
+              <Icon
+                name="trip-origin"
+                size={18}
+                color={C.primary}
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="Kota asal"
                 placeholderTextColor={C.textMuted}
                 value={searchParams.origin}
-                onChangeText={(t) => {
+                onChangeText={t => {
                   setSearchParams({ ...searchParams, origin: t });
                   setShowOriginDropdown(true);
                 }}
@@ -280,14 +286,21 @@ export default function PassengerHome({ navigation }) {
                     key={i}
                     style={[
                       styles.dropdownItem,
-                      i === getFilteredOrigins().length - 1 && { borderBottomWidth: 0 },
+                      i === getFilteredOrigins().length - 1 && {
+                        borderBottomWidth: 0,
+                      },
                     ]}
                     onPress={() => {
                       setSearchParams({ ...searchParams, origin: city });
                       setShowOriginDropdown(false);
                     }}
                   >
-                    <Icon name="location-on" size={14} color={C.textMuted} style={{ marginRight: 8 }} />
+                    <Icon
+                      name="location-on"
+                      size={14}
+                      color={C.textMuted}
+                      style={{ marginRight: 8 }}
+                    />
                     <Text style={styles.dropdownText}>{city}</Text>
                   </TouchableOpacity>
                 ))}
@@ -308,13 +321,18 @@ export default function PassengerHome({ navigation }) {
           <View style={{ zIndex: 10 }}>
             <Text style={styles.fieldLabel}>KE</Text>
             <View style={styles.inputRow}>
-              <Icon name="location-on" size={18} color={C.primary} style={styles.inputIcon} />
+              <Icon
+                name="location-on"
+                size={18}
+                color={C.primary}
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="Kota tujuan"
                 placeholderTextColor={C.textMuted}
                 value={searchParams.destination}
-                onChangeText={(t) => {
+                onChangeText={t => {
                   setSearchParams({ ...searchParams, destination: t });
                   setShowDestinationDropdown(true);
                 }}
@@ -333,26 +351,34 @@ export default function PassengerHome({ navigation }) {
                 </TouchableOpacity>
               )}
             </View>
-            {showDestinationDropdown && getFilteredDestinations().length > 0 && (
-              <View style={styles.dropdown}>
-                {getFilteredDestinations().map((city, i) => (
-                  <TouchableOpacity
-                    key={i}
-                    style={[
-                      styles.dropdownItem,
-                      i === getFilteredDestinations().length - 1 && { borderBottomWidth: 0 },
-                    ]}
-                    onPress={() => {
-                      setSearchParams({ ...searchParams, destination: city });
-                      setShowDestinationDropdown(false);
-                    }}
-                  >
-                    <Icon name="location-on" size={14} color={C.textMuted} style={{ marginRight: 8 }} />
-                    <Text style={styles.dropdownText}>{city}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
+            {showDestinationDropdown &&
+              getFilteredDestinations().length > 0 && (
+                <View style={styles.dropdown}>
+                  {getFilteredDestinations().map((city, i) => (
+                    <TouchableOpacity
+                      key={i}
+                      style={[
+                        styles.dropdownItem,
+                        i === getFilteredDestinations().length - 1 && {
+                          borderBottomWidth: 0,
+                        },
+                      ]}
+                      onPress={() => {
+                        setSearchParams({ ...searchParams, destination: city });
+                        setShowDestinationDropdown(false);
+                      }}
+                    >
+                      <Icon
+                        name="location-on"
+                        size={14}
+                        color={C.textMuted}
+                        style={{ marginRight: 8 }}
+                      />
+                      <Text style={styles.dropdownText}>{city}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
           </View>
 
           {/* Date + Passenger row */}
@@ -362,7 +388,12 @@ export default function PassengerHome({ navigation }) {
               style={styles.metaItem}
               onPress={() => setShowDatePicker(true)}
             >
-              <Icon name="event" size={16} color={C.primary} style={{ marginRight: 6 }} />
+              <Icon
+                name="event"
+                size={16}
+                color={C.primary}
+                style={{ marginRight: 6 }}
+              />
               <View>
                 <Text style={styles.metaLabel}>Tanggal</Text>
                 <Text style={styles.metaValue}>{formattedDate}</Text>
@@ -373,14 +404,19 @@ export default function PassengerHome({ navigation }) {
 
             {/* Passenger counter */}
             <View style={styles.metaItem}>
-              <Icon name="person-outline" size={16} color={C.primary} style={{ marginRight: 6 }} />
+              <Icon
+                name="person-outline"
+                size={16}
+                color={C.primary}
+                style={{ marginRight: 6 }}
+              />
               <View>
                 <Text style={styles.metaLabel}>Penumpang</Text>
                 <View style={styles.counterRow}>
                   <TouchableOpacity
                     style={styles.counterBtn}
                     onPress={() =>
-                      setSearchParams((p) => ({
+                      setSearchParams(p => ({
                         ...p,
                         passengers: Math.max(1, p.passengers - 1),
                       }))
@@ -388,13 +424,15 @@ export default function PassengerHome({ navigation }) {
                   >
                     <Icon name="remove" size={14} color={C.primary} />
                   </TouchableOpacity>
-                  <Text style={styles.counterValue}>{searchParams.passengers}</Text>
+                  <Text style={styles.counterValue}>
+                    {searchParams.passengers}
+                  </Text>
                   <TouchableOpacity
                     style={styles.counterBtn}
                     onPress={() =>
-                      setSearchParams((p) => ({
+                      setSearchParams(p => ({
                         ...p,
-                        passengers: Math.min(4, p.passengers + 1),
+                        passengers: Math.min(10, p.passengers + 1),
                       }))
                     }
                   >
@@ -416,7 +454,12 @@ export default function PassengerHome({ navigation }) {
               <ActivityIndicator color={C.white} size="small" />
             ) : (
               <>
-                <Icon name="search" size={18} color={C.white} style={{ marginRight: 8 }} />
+                <Icon
+                  name="search"
+                  size={18}
+                  color={C.white}
+                  style={{ marginRight: 8 }}
+                />
                 <Text style={styles.searchBtnText}>Cari Bus</Text>
               </>
             )}
@@ -429,20 +472,12 @@ export default function PassengerHome({ navigation }) {
             style={styles.quickItem}
             onPress={() => navigation.navigate('MyTickets')}
           >
-            <View style={[styles.quickIcon, { backgroundColor: C.primaryLight }]}>
+            <View
+              style={[styles.quickIcon, { backgroundColor: C.primaryLight }]}
+            >
               <Icon name="confirmation-number" size={22} color={C.primary} />
             </View>
             <Text style={styles.quickLabel}>Tiket Saya</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickItem}
-            onPress={() => navigation.navigate('MyTickets')}
-          >
-            <View style={[styles.quickIcon, { backgroundColor: '#F5F3FF' }]}>
-              <Icon name="history" size={22} color="#7C3AED" />
-            </View>
-            <Text style={styles.quickLabel}>Riwayat</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -485,7 +520,7 @@ export default function PassengerHome({ navigation }) {
         open={showDatePicker}
         date={searchParams.date}
         mode="date"
-        onConfirm={(date) => {
+        onConfirm={date => {
           setShowDatePicker(false);
           setSearchParams({ ...searchParams, date });
         }}
@@ -551,7 +586,7 @@ const styles = StyleSheet.create({
   searchCard: {
     backgroundColor: C.white,
     marginHorizontal: 16,
-    marginTop: -18,       // overlaps header bottom
+    marginTop: -18, // overlaps header bottom
     borderRadius: 20,
     padding: 20,
     shadowColor: '#000',

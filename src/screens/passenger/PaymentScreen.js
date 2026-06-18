@@ -142,7 +142,7 @@ const PaymentScreen = () => {
       name: 'Bayar di Tempat',
       icon: 'money-bill-wave',
       type: FontAwesome5,
-      description: 'Bayar saat naik bus',
+      description: 'Bayar ke admin/petugas',
       color: C.textSub,
       popular: false,
     },
@@ -258,7 +258,7 @@ const PaymentScreen = () => {
     if (selectedMethod === 'cash') {
       Alert.alert(
         'Pembayaran di Tempat',
-        'Anda memilih pembayaran di tempat. Pastikan untuk membayar kepada sopir bus saat naik.',
+        'Anda memilih pembayaran di tempat. Silakan bayar kepada admin/petugas di terminal atau saat naik bus. Pemesanan akan dikonfirmasi setelah admin memverifikasi pembayaran Anda.',
         [
           { text: 'Batalkan', style: 'cancel' },
           {
@@ -341,7 +341,23 @@ const PaymentScreen = () => {
 
       setProcessing(false);
       updatePaymentSteps(3);
-      await handlePaymentSuccess();
+
+      // Show pending payment success for cash
+      Alert.alert(
+        'Pemesanan Berhasil',
+        'Pemesanan Anda telah dibuat. Silakan bayar kepada admin/petugas di terminal atau saat naik bus. Pemesanan akan dikonfirmasi setelah pembayaran diterima.',
+        [
+          {
+            text: 'Lihat Tiket',
+            onPress: () => {
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'PassengerHome' }, { name: 'MyTickets' }],
+              });
+            },
+          },
+        ],
+      );
     } catch (error) {
       setProcessing(false);
       Alert.alert('Error', 'Gagal memproses pembayaran.');

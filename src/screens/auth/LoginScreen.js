@@ -15,12 +15,15 @@ import { useDispatch, useSelector } from 'react-redux';
 import { login, googleLogin } from '../../store/slices/authSlice';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import {
+  GoogleSignin,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 import { configureGoogleSignin } from '../../config/googleConfig';
 
 export default function LoginScreen({ navigation }) {
   const dispatch = useDispatch();
-  const { loading, error } = useSelector((state) => state.auth);
+  const { loading, error } = useSelector(state => state.auth);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,22 +50,52 @@ export default function LoginScreen({ navigation }) {
     try {
       await GoogleSignin.hasPlayServices();
       const userInfo = await GoogleSignin.signIn();
-      const idToken = userInfo.data.idToken;
+      const idToken = userInfo.data?.idToken;
 
-      // console.log(userInfo.data.idToken);
+      if (!idToken) {
+        Alert.alert(
+          'Google Sign-In Error',
+          'Tidak mendapatkan token dari Google. Periksa konfigurasi Web Client ID.',
+        );
+        return;
+      }
 
       const resultAction = await dispatch(googleLogin(idToken));
       if (googleLogin.fulfilled.match(resultAction)) {
         // Login sukses
       } else {
-        Alert.alert('Google Login Failed', resultAction.payload || 'Terjadi kesalahan');
+        Alert.alert(
+          'Google Login Failed',
+          resultAction.payload || 'Terjadi kesalahan',
+        );
       }
     } catch (error) {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
         // user membatalkan
       } else if (error.code === statusCodes.IN_PROGRESS) {
         // proses sedang berlangsung
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert(
+          'Google Play Services',
+          'Google Play Services tidak tersedia atau perlu diperbarui di perangkat ini.',
+        );
+      } else if (
+        error.code === '10' ||
+        error.code === 10 ||
+        error.code === 'DEVELOPER_ERROR'
+      ) {
+        // DEVELOPER_ERROR (10): konfigurasi OAuth tidak cocok.
+        // Pastikan di Google Cloud Console ada Android OAuth Client dengan
+        // package name "com.busticketingmobile" + SHA-1 keystore yang benar,
+        // dan webClientId di googleConfig.js memakai Web Client ID.
+        console.warn('Google Sign-In DEVELOPER_ERROR:', error);
+        Alert.alert(
+          'Konfigurasi Google Sign-In',
+          'Login Google belum dikonfigurasi dengan benar (DEVELOPER_ERROR). ' +
+            'SHA-1 / package name aplikasi belum terdaftar di Google Cloud Console.',
+        );
       } else {
+        console.warn('Google Sign-In error:', error);
         Alert.alert('Google Sign-In Error', error.message);
       }
     }
@@ -75,7 +108,12 @@ export default function LoginScreen({ navigation }) {
         style={styles.keyboardView}
       >
         <View style={styles.header}>
-          <MaterialIcons name="directions-bus" size={80} color="#1E88E5" style={styles.logo} />
+          <MaterialIcons
+            name="directions-bus"
+            size={80}
+            color="#1E88E5"
+            style={styles.logo}
+          />
           <Text style={styles.title}>Bus Ticketing</Text>
           <Text style={styles.subtitle}>Sign in to continue</Text>
         </View>
@@ -83,7 +121,12 @@ export default function LoginScreen({ navigation }) {
         <View style={styles.form}>
           {/* Email Input */}
           <View style={styles.inputContainer}>
-            <MaterialIcons name="email" size={20} color="#666" style={styles.inputIcon} />
+            <MaterialIcons
+              name="email"
+              size={20}
+              color="#666"
+              style={styles.inputIcon}
+            />
             <TextInput
               style={styles.input}
               placeholder="Email"
@@ -97,7 +140,12 @@ export default function LoginScreen({ navigation }) {
 
           {/* Password Input */}
           <View style={styles.inputContainer}>
-            <MaterialIcons name="lock" size={20} color="#666" style={styles.inputIcon} />
+            <MaterialIcons
+              name="lock"
+              size={20}
+              color="#666"
+              style={styles.inputIcon}
+            />
             <TextInput
               style={[styles.input, { flex: 1 }]}
               placeholder="Password"
@@ -155,13 +203,12 @@ export default function LoginScreen({ navigation }) {
             onPress={() => navigation.navigate('Register')}
           >
             <Text style={styles.registerText}>
-              Don't have an account? <Text style={styles.registerTextBold}>Register</Text>
+              Don't have an account?{' '}
+              <Text style={styles.registerTextBold}>Register</Text>
             </Text>
           </TouchableOpacity>
 
-          {error && (
-            <Text style={styles.errorText}>{error}</Text>
-          )}
+          {error && <Text style={styles.errorText}>{error}</Text>}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -173,7 +220,12 @@ const styles = StyleSheet.create({
   keyboardView: { flex: 1, justifyContent: 'center', paddingHorizontal: 20 },
   header: { alignItems: 'center', marginBottom: 40 },
   logo: { marginBottom: 10 },
-  title: { fontSize: 32, fontWeight: 'bold', color: '#1E88E5', marginBottom: 10 },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#1E88E5',
+    marginBottom: 10,
+  },
   subtitle: { fontSize: 16, color: '#666' },
   form: { width: '100%' },
   inputContainer: {

@@ -1,12 +1,12 @@
 import api from './api';
 
 export const busService = {
-  searchBuses: async (params) => {
+  searchBuses: async params => {
     const response = await api.get('/buses/search', { params });
     return response;
   },
 
-  getBusDetails: async (busId) => {
+  getBusDetails: async busId => {
     const response = await api.get(`/buses/${busId}`);
     return response;
   },
@@ -18,7 +18,7 @@ export const busService = {
     return response;
   },
 
-  bookTicket: async (bookingData) => {
+  bookTicket: async bookingData => {
     const response = await api.post('/bookings', bookingData);
     return response;
   },
@@ -28,7 +28,7 @@ export const busService = {
     return response;
   },
 
-  getBookingDetail: async (bookingId) => {
+  getBookingDetail: async bookingId => {
     const response = await api.get(`/bookings/${bookingId}`);
     return response;
   },
@@ -38,13 +38,18 @@ export const busService = {
     return response;
   },
 
-  cancelBooking: async (bookingId) => {
+  cancelBooking: async bookingId => {
     const response = await api.delete(`/bookings/${bookingId}`);
     return response;
   },
 
   getRoutes: async () => {
     const response = await api.get('/routes');
+    return response;
+  },
+
+  getTickets: async bookingId => {
+    const response = await api.get(`/bookings/${bookingId}/tickets`);
     return response;
   },
 };
