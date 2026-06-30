@@ -145,7 +145,7 @@ const initialState = {
   searchParams: {
     departure: '',
     destination: '',
-    departureDate: new Date().toISOString().split('T')[0], // Format YYYY-MM-DD
+    departureDate: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0], // Format YYYY-MM-DD locally
     passengers: 1,
     returnDate: null,
     tripType: 'one-way',

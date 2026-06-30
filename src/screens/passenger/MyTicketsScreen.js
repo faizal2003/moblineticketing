@@ -41,6 +41,11 @@ import {
 } from '../../store/slices/bookingSlice';
 import { busService } from '../../services/busService';
 
+const parseLocalDate = (dateStr) => {
+  if (!dateStr) return new Date();
+  return new Date(dateStr);
+};
+
 // ─── Color Tokens ─────────────────────────────────────────────────────────────
 const C = {
   primary: '#2563EB',
@@ -445,7 +450,7 @@ const MyTicketsScreen = () => {
                 </View>
                 <Text style={styles.timeText}>
                   {departureTime
-                    ? new Date(departureTime).toLocaleTimeString([], {
+                    ? parseLocalDate(departureTime).toLocaleTimeString([], {
                         hour: '2-digit',
                         minute: '2-digit',
                       })
@@ -465,7 +470,7 @@ const MyTicketsScreen = () => {
                 </View>
                 <Text style={styles.timeText}>
                   {arrivalTime
-                    ? new Date(arrivalTime).toLocaleTimeString([], {
+                    ? parseLocalDate(arrivalTime).toLocaleTimeString([], {
                         hour: '2-digit',
                         minute: '2-digit',
                       })

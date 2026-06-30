@@ -49,6 +49,13 @@ const C = {
   headerSub: '#93C5FD',
 };
 
+const getUTCDateString = (date) => {
+  if (!date) return null;
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d)) return null;
+  return d.toISOString();
+};
+
 const SearchBusScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   
@@ -56,17 +63,20 @@ const SearchBusScreen = ({ navigation }) => {
   const loading = useSelector(selectBusLoading);
   const error = useSelector(selectBusError);
   
+  const now = new Date();
+  const todayUTC = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+
   const [formData, setFormData] = useState({
     departure: '',
     destination: '',
-    departureDate: new Date(),
+    departureDate: todayUTC,
     passengers: '1',
   });
   
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showReturnDatePicker, setShowReturnDatePicker] = useState(false);
   const [isRoundTrip, setIsRoundTrip] = useState(false);
-  const [returnDate, setReturnDate] = useState(new Date());
+  const [returnDate, setReturnDate] = useState(todayUTC);
 
   useEffect(() => {
     if (searchParams.departure) {
@@ -140,9 +150,9 @@ const SearchBusScreen = ({ navigation }) => {
     dispatch(updateSearchParams({
       departure: formData.departure.trim(),
       destination: formData.destination.trim(),
-      departureDate: formData.departureDate.toISOString(),
+      departureDate: getUTCDateString(formData.departureDate),
       passengers: parseInt(formData.passengers),
-      returnDate: isRoundTrip ? returnDate.toISOString() : null,
+      returnDate: isRoundTrip ? getUTCDateString(returnDate) : null,
       tripType: isRoundTrip ? 'round-trip' : 'one-way',
     }));
 
@@ -151,9 +161,9 @@ const SearchBusScreen = ({ navigation }) => {
     const searchParams = {
       departure: formData.departure.trim(),
       destination: formData.destination.trim(),
-      departureDate: formData.departureDate.toISOString(),
+      departureDate: getUTCDateString(formData.departureDate),
       passengers: parseInt(formData.passengers),
-      returnDate: isRoundTrip ? returnDate.toISOString() : null,
+      returnDate: isRoundTrip ? getUTCDateString(returnDate) : null,
     };
 
     try {
@@ -201,13 +211,12 @@ const SearchBusScreen = ({ navigation }) => {
     }
   };
 
-  const formatDate = (date) => {
-    return date.toLocaleDateString('id-ID', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+  const formatDateUTC = (date) => {
+    if (!date) return '';
+    const d = typeof date === 'string' ? new Date(date) : date;
+    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    return `${days[d.getUTCDay()]}, ${d.getUTCDate()} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
   };
 
   return (
@@ -312,7 +321,7 @@ const SearchBusScreen = ({ navigation }) => {
                 onPress={() => setShowDatePicker(true)}
               >
                 <Text style={styles.dateText}>
-                  {formatDate(formData.departureDate)}
+                  {formatDateUTC(formData.departureDate)}
                 </Text>
                 <Ionicons name="chevron-down" size={18} color={C.textMuted} />
               </TouchableOpacity>
@@ -333,7 +342,7 @@ const SearchBusScreen = ({ navigation }) => {
                     onPress={() => setShowReturnDatePicker(true)}
                   >
                     <Text style={styles.dateText}>
-                      {formatDate(returnDate)}
+                      {formatDateUTC(returnDate)}
                     </Text>
                     <Ionicons name="chevron-down" size={18} color={C.textMuted} />
                   </TouchableOpacity>
@@ -415,16 +424,22 @@ const SearchBusScreen = ({ navigation }) => {
           <TouchableOpacity 
             style={styles.quickAction}
             onPress={() => {
-              const today = new Date();
+              const now = new Date();
+              const todayUTC = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
               setFormData({
                 ...formData,
-                departureDate: today,
+                departureDate: todayUTC,
               });
-              handleSearch();
+              
+              // We can't call handleSearch immediately because state update is async, 
+              // but handleSearch depends on formData. 
+              // The easiest fix is to just let the user see the date changed and press Search themselves, 
+              // OR we can pass it directly to the dispatcher.
+              // To be safe, we just set the date. The user can press search.
             }}
           >
             <Ionicons name="flash" size={22} color={C.amber} />
-            <Text style={styles.quickActionText}>Berangkat Hari Ini</Text>
+            <Text style={styles.quickActionText}>Hari Ini</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -434,9 +449,10 @@ const SearchBusScreen = ({ navigation }) => {
         open={showDatePicker}
         date={formData.departureDate}
         mode="date"
+        timeZoneOffsetInMinutes={0}
         onConfirm={handleDateChange}
         onCancel={() => setShowDatePicker(false)}
-        minimumDate={new Date()}
+        minimumDate={new Date(Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()))}
         title="Pilih Tanggal Berangkat"
         confirmText="Pilih"
         cancelText="Batal"
@@ -447,6 +463,7 @@ const SearchBusScreen = ({ navigation }) => {
         open={showReturnDatePicker}
         date={returnDate}
         mode="date"
+        timeZoneOffsetInMinutes={0}
         onConfirm={handleReturnDateChange}
         onCancel={() => setShowReturnDatePicker(false)}
         minimumDate={formData.departureDate}

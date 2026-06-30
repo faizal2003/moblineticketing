@@ -22,6 +22,11 @@ import { useSelector } from 'react-redux';
 import { selectSearchParams } from '../../store/slices/bookingSlice';
 import { busService } from '../../services/busService';
 
+const parseLocalDate = (dateStr) => {
+  if (!dateStr) return new Date();
+  return new Date(dateStr);
+};
+
 // ─── Color Tokens ─────────────────────────────────────────────────────────────
 const C = {
   primary: '#2563EB',
@@ -76,6 +81,12 @@ const BusDetailScreen = () => {
     arrivalTime: arrivalTime || '',
     duration: '',
     price: price || 0,
+    driverName: '',
+    driverPhone: '',
+    driverPicture: '',
+    conductorName: '',
+    conductorPhone: '',
+    conductorPicture: '',
     policies: [
       'Tiket tidak dapat diubah atau dibatalkan',
       'Check-in minimal 30 menit sebelum keberangkatan',
@@ -105,14 +116,20 @@ const BusDetailScreen = () => {
         facilities: data.facilities || [],
         totalSeats: data.total_seats,
         availableSeats: schedule ? schedule.available_seats : data.total_seats,
+        driverName: data.driver_name,
+        driverPhone: data.driver_phone,
+        driverPicture: data.driver_picture,
+        conductorName: data.conductor_name,
+        conductorPhone: data.conductor_phone,
+        conductorPicture: data.conductor_picture,
         departureTime: schedule
-          ? new Date(schedule.departure_time).toLocaleTimeString([], {
+          ? parseLocalDate(schedule.departure_time).toLocaleTimeString([], {
               hour: '2-digit',
               minute: '2-digit',
             })
           : busDetails.departureTime,
         arrivalTime: schedule
-          ? new Date(schedule.arrival_time).toLocaleTimeString([], {
+          ? parseLocalDate(schedule.arrival_time).toLocaleTimeString([], {
               hour: '2-digit',
               minute: '2-digit',
             })
@@ -295,6 +312,45 @@ const BusDetailScreen = () => {
             scrollEnabled={false}
             contentContainerStyle={styles.facilitiesList}
           />
+        </View>
+
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Kru Bus</Text>
+          <View style={styles.crewContainer}>
+            <View style={styles.crewItem}>
+              <View style={[styles.crewIcon, { overflow: 'hidden' }]}>
+                {busDetails.driverPicture ? (
+                  <Image source={{ uri: busDetails.driverPicture }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                ) : (
+                  <MaterialIcons name="person" size={24} color={C.primary} />
+                )}
+              </View>
+              <View style={styles.crewInfo}>
+                <Text style={styles.crewLabel}>Sopir / Driver</Text>
+                <Text style={styles.crewName} numberOfLines={1}>{busDetails.driverName || 'Tidak ditentukan'}</Text>
+                {busDetails.driverPhone ? (
+                  <Text style={styles.crewPhone} numberOfLines={1}>{busDetails.driverPhone}</Text>
+                ) : null}
+              </View>
+            </View>
+            <View style={styles.crewDivider} />
+            <View style={styles.crewItem}>
+              <View style={[styles.crewIcon, { overflow: 'hidden' }]}>
+                {busDetails.conductorPicture ? (
+                  <Image source={{ uri: busDetails.conductorPicture }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                ) : (
+                  <MaterialIcons name="support-agent" size={24} color={C.primary} />
+                )}
+              </View>
+              <View style={styles.crewInfo}>
+                <Text style={styles.crewLabel}>Kondektur</Text>
+                <Text style={styles.crewName} numberOfLines={1}>{busDetails.conductorName || 'Tidak ditentukan'}</Text>
+                {busDetails.conductorPhone ? (
+                  <Text style={styles.crewPhone} numberOfLines={1}>{busDetails.conductorPhone}</Text>
+                ) : null}
+              </View>
+            </View>
+          </View>
         </View>
 
         <View style={styles.priceCard}>
@@ -522,6 +578,51 @@ const styles = StyleSheet.create({
     width: 1,
     height: '80%',
     backgroundColor: C.border,
+  },
+  crewContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingVertical: 4,
+  },
+  crewItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  crewIcon: {
+    backgroundColor: C.primaryLight,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  crewInfo: {
+    flex: 1,
+  },
+  crewLabel: {
+    fontSize: 11,
+    color: C.textMuted,
+    fontWeight: '600',
+  },
+  crewName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: C.text,
+    marginTop: 1,
+  },
+  crewPhone: {
+    fontSize: 12,
+    color: C.textSub,
+    marginTop: 1,
+  },
+  crewDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: C.border,
+    marginHorizontal: 12,
   },
   sectionContainer: {
     backgroundColor: C.white,

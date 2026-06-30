@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   FlatList,
   StatusBar,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
@@ -17,6 +18,11 @@ import { logout } from '../../store/slices/authSlice';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { conductorService } from '../../services/conductorService';
 import { useFocusEffect } from '@react-navigation/native';
+
+const parseLocalDate = (dateStr) => {
+  if (!dateStr) return new Date();
+  return new Date(dateStr);
+};
 
 // ─── Color Tokens ─────────────────────────────────────────────────────────────
 const C = {
@@ -133,7 +139,7 @@ export default function ConductorHome({ navigation }) {
       <View style={styles.routeInfo}>
         <View style={styles.location}>
           <Text style={styles.locationTime}>
-            {item.departure_time ? new Date(item.departure_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+            {item.departure_time ? parseLocalDate(item.departure_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
           </Text>
           <Text style={styles.locationCity}>{item.departure_city}</Text>
         </View>
@@ -148,7 +154,7 @@ export default function ConductorHome({ navigation }) {
         
         <View style={styles.location}>
           <Text style={styles.locationTime}>
-            {item.arrival_time ? new Date(item.arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+            {item.arrival_time ? parseLocalDate(item.arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
           </Text>
           <Text style={styles.locationCity}>{item.arrival_city}</Text>
         </View>
@@ -172,9 +178,18 @@ export default function ConductorHome({ navigation }) {
       <StatusBar barStyle="light-content" backgroundColor={C.headerBg} translucent={false} />
       
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Halo, {user?.name}</Text>
-          <Text style={styles.role}>Kondektur</Text>
+        <View style={styles.headerLeft}>
+          {user?.avatar_url ? (
+            <Image source={{ uri: user.avatar_url }} style={styles.avatar} />
+          ) : (
+            <View style={styles.avatarFallback}>
+              <Text style={styles.avatarText}>{user?.name ? user.name.charAt(0).toUpperCase() : 'U'}</Text>
+            </View>
+          )}
+          <View style={{ marginLeft: 10 }}>
+            <Text style={styles.greeting}>Halo, {user?.name}</Text>
+            <Text style={styles.role}>Kondektur</Text>
+          </View>
         </View>
         <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
           <Icon name="logout" size={22} color={C.headerText} />
@@ -264,6 +279,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: C.headerBg,
+  },
+  headerLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: '#93C5FD',
+  },
+  avatarFallback: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#3B82F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#93C5FD',
+  },
+  avatarText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   greeting: {
     fontSize: 20,

@@ -32,6 +32,11 @@ import QRCode from 'react-native-qrcode-svg';
 import { CameraRoll } from '@react-native-camera-roll/camera-roll';
 import { busService } from '../../services/busService';
 
+const parseLocalDate = (dateStr) => {
+  if (!dateStr) return new Date();
+  return new Date(dateStr);
+};
+
 // ─── Color Tokens ─────────────────────────────────────────────────────────────
 const C = {
   primary: '#2563EB',
@@ -114,11 +119,11 @@ const TicketDetailScreen = () => {
           data.schedule?.bus?.number || data.schedule?.bus_number || '-',
         departure: data.schedule?.departure_city,
         destination: data.schedule?.arrival_city,
-        departureDate: new Date(data.schedule?.departure_time),
-        departureTime: new Date(
+        departureDate: parseLocalDate(data.schedule?.departure_time),
+        departureTime: parseLocalDate(
           data.schedule?.departure_time,
         ).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        arrivalTime: new Date(data.schedule?.arrival_time).toLocaleTimeString(
+        arrivalTime: parseLocalDate(data.schedule?.arrival_time).toLocaleTimeString(
           [],
           { hour: '2-digit', minute: '2-digit' },
         ),
