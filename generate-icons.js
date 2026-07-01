@@ -2,7 +2,7 @@ const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
 
-const sourceImage = 'C:\\Users\\faiza\\.gemini\\antigravity-cli\\brain\\6142a528-3005-4cd0-ade4-a0df60b49e9b\\bus_app_icon_1780372646055.png';
+const sourceImage = 'C:/Users/faiza/Documents/BusTicketingMobile-main/mbl/src/logo_app_bus.png';
 const androidPath = path.join(__dirname, 'android/app/src/main/res');
 
 const androidSizes = [

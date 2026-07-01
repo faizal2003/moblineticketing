@@ -343,10 +343,9 @@ const BookingScreen = () => {
           keyboardType="numeric"
         />
         {isMain && (
-          <TouchableOpacity style={styles.identityTypeButton}>
+          <View style={styles.identityTypeButton}>
             <Text style={styles.identityTypeText}>{formData.identityType}</Text>
-            <Ionicons name="chevron-down" size={16} color={C.textSub} />
-          </TouchableOpacity>
+          </View>
         )}
       </View>
       {validationErrors[isMain ? 'identityNumber' : `passenger_${index}_identity`] && (
