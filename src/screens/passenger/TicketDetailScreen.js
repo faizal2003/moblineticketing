@@ -93,6 +93,7 @@ const TicketDetailScreen = () => {
       setLoading(true);
       const response = await busService.getBookingDetail(bookingId);
       const data = response.data.data;
+      console.log('Raw ticket detail data:', JSON.stringify(data, null, 2));
 
       // Fetch tickets if booking is confirmed and has tickets
       let ticketsData = [];
@@ -142,7 +143,7 @@ const TicketDetailScreen = () => {
           name: p.full_name,
           identityNumber: p.id_number,
           phone: p.phone,
-          email: '-',
+          email: p.email || data.user?.email || '-',
         })),
       };
 
