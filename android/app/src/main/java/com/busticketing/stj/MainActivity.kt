@@ -1,4 +1,4 @@
-package com.busticketingmobile
+package com.busticketing.stj
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

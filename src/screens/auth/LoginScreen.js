@@ -86,7 +86,7 @@ export default function LoginScreen({ navigation }) {
       ) {
         // DEVELOPER_ERROR (10): konfigurasi OAuth tidak cocok.
         // Pastikan di Google Cloud Console ada Android OAuth Client dengan
-        // package name "com.busticketingmobile" + SHA-1 keystore yang benar,
+        // package name "com.busticketing.stj" + SHA-1 keystore yang benar,
         // dan webClientId di googleConfig.js memakai Web Client ID.
         console.warn('Google Sign-In DEVELOPER_ERROR:', error);
         Alert.alert(

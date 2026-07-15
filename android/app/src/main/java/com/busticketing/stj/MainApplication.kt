@@ -1,4 +1,4 @@
-package com.busticketingmobile
+package com.busticketing.stj
 
 import android.app.Application
 import com.facebook.react.PackageList
