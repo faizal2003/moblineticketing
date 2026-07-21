@@ -247,6 +247,12 @@ export default function PassengerHome({ navigation }) {
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity
+              style={styles.headerBtn}
+              onPress={() => navigation.navigate('Profile')}
+            >
+              <Icon name="person-outline" size={24} color={C.headerText} />
+            </TouchableOpacity>
+            <TouchableOpacity
               style={[styles.headerBtn, { marginLeft: 8 }]}
               onPress={handleLogout}
             >

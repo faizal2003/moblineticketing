@@ -77,6 +77,9 @@ const SearchBusScreen = ({ navigation }) => {
   const [showReturnDatePicker, setShowReturnDatePicker] = useState(false);
   const [isRoundTrip, setIsRoundTrip] = useState(false);
   const [returnDate, setReturnDate] = useState(todayUTC);
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const clearError = (field) => setFieldErrors(p => ({ ...p, [field]: null }));
 
   useEffect(() => {
     if (searchParams.departure) {
@@ -117,31 +120,17 @@ const SearchBusScreen = ({ navigation }) => {
   };
 
   const validateForm = () => {
-    if (!formData.departure.trim()) {
-      Alert.alert('Error', 'Harap masukkan kota keberangkatan');
-      return false;
-    }
-    if (!formData.destination.trim()) {
-      Alert.alert('Error', 'Harap masukkan kota tujuan');
-      return false;
-    }
-    if (formData.departure.toLowerCase() === formData.destination.toLowerCase()) {
-      Alert.alert('Error', 'Kota keberangkatan dan tujuan tidak boleh sama');
-      return false;
-    }
-    if (parseInt(formData.passengers) < 1) {
-      Alert.alert('Error', 'Jumlah penumpang minimal 1');
-      return false;
-    }
-    if (parseInt(formData.passengers) > 10) {
-      Alert.alert('Error', 'Maksimal 10 penumpang per pemesanan');
-      return false;
-    }
-    if (isRoundTrip && returnDate <= formData.departureDate) {
-      Alert.alert('Error', 'Tanggal kembali harus setelah tanggal berangkat');
-      return false;
-    }
-    return true;
+    const e = {};
+    if (!formData.departure.trim()) e.departure = 'Harap masukkan kota keberangkatan';
+    if (!formData.destination.trim()) e.destination = 'Harap masukkan kota tujuan';
+    else if (formData.departure.trim() && formData.departure.toLowerCase() === formData.destination.toLowerCase())
+      e.destination = 'Kota keberangkatan dan tujuan tidak boleh sama';
+    if (parseInt(formData.passengers) < 1) e.passengers = 'Jumlah penumpang minimal 1';
+    else if (parseInt(formData.passengers) > 10) e.passengers = 'Maksimal 10 penumpang per pemesanan';
+    if (isRoundTrip && returnDate <= formData.departureDate)
+      e.returnDate = 'Tanggal kembali harus setelah tanggal berangkat';
+    setFieldErrors(e);
+    return Object.keys(e).length === 0;
   };
 
   const handleSearch = async () => {
@@ -277,13 +266,14 @@ const SearchBusScreen = ({ navigation }) => {
             <View style={styles.locationInputContainer}>
               <Text style={styles.inputLabel}>Dari</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, fieldErrors.departure && styles.inputError]}
                 placeholder="Kota keberangkatan"
                 placeholderTextColor={C.textMuted}
                 value={formData.departure}
-                onChangeText={(text) => handleInputChange('departure', text)}
+                onChangeText={(text) => { handleInputChange('departure', text); clearError('departure'); }}
                 autoCapitalize="words"
               />
+              {fieldErrors.departure && <Text style={styles.fieldError}>{fieldErrors.departure}</Text>}
             </View>
           </View>
           
@@ -298,13 +288,14 @@ const SearchBusScreen = ({ navigation }) => {
             <View style={styles.locationInputContainer}>
               <Text style={styles.inputLabel}>Ke</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, fieldErrors.destination && styles.inputError]}
                 placeholder="Kota tujuan"
                 placeholderTextColor={C.textMuted}
                 value={formData.destination}
-                onChangeText={(text) => handleInputChange('destination', text)}
+                onChangeText={(text) => { handleInputChange('destination', text); clearError('destination'); }}
                 autoCapitalize="words"
               />
+              {fieldErrors.destination && <Text style={styles.fieldError}>{fieldErrors.destination}</Text>}
             </View>
           </View>
         </View>
@@ -587,6 +578,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
+  inputError: {
+    borderBottomColor: C.red,
+  },
+  fieldError: { color: C.red, fontSize: 12, marginTop: 2, marginBottom: 4 },
   dateRow: {
     flexDirection: 'row',
     alignItems: 'center',

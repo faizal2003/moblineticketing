@@ -21,6 +21,7 @@ import PaymentScreen from '../screens/passenger/PaymentScreen';
 import MyTicketsScreen from '../screens/passenger/MyTicketsScreen';
 import TicketDetailScreen from '../screens/passenger/TicketDetailScreen';
 import FAQScreen from '../screens/passenger/FAQScreen';
+import ProfileScreen from '../screens/passenger/ProfileScreen';
 
 // Conductor
 import ConductorHome from '../screens/conductor/HomeScreen';
@@ -87,6 +88,7 @@ export default function AppNav() {
             <Stack.Screen name="MyTickets" component={MyTicketsScreen} />
             <Stack.Screen name="TicketDetail" component={TicketDetailScreen} />
             <Stack.Screen name="FAQ" component={FAQScreen} />
+            <Stack.Screen name="Profile" component={ProfileScreen} />
           </>
         ) : user?.role === 'kondektur' ? (
           <>

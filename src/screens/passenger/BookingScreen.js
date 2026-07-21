@@ -159,42 +159,52 @@ const BookingScreen = () => {
 
   const validateForm = () => {
     const errors = {};
-    
+
     if (!formData.fullName.trim()) {
       errors.fullName = 'Nama lengkap harus diisi';
+    } else if (formData.fullName.trim().length > 50) {
+      errors.fullName = 'Nama lengkap maksimal 50 karakter';
     }
-    
+
     if (!formData.email.trim()) {
       errors.email = 'Email harus diisi';
+    } else if (formData.email.length > 50) {
+      errors.email = 'Email maksimal 50 karakter';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = 'Format email tidak valid';
     }
-    
+
     if (!formData.phone.trim()) {
       errors.phone = 'Nomor telepon harus diisi';
-    } else if (!/^[0-9]{10,13}$/.test(formData.phone)) {
-      errors.phone = 'Nomor telepon harus 10-13 digit angka';
+    } else if (!/^[0-9]{10,15}$/.test(formData.phone)) {
+      errors.phone = 'Nomor telepon harus 10-15 digit angka';
     }
-    
+
     if (!formData.identityNumber.trim()) {
       errors.identityNumber = 'Nomor identitas harus diisi';
+    } else if (formData.identityNumber.trim().length > 20) {
+      errors.identityNumber = 'Nomor identitas maksimal 20 karakter';
     }
-    
+
     if (passengerInfo.additionalPassengers.length > 0) {
       passengerInfo.additionalPassengers.forEach((passenger, index) => {
         if (!passenger.name?.trim()) {
           errors[`passenger_${index}_name`] = `Nama penumpang ${index + 2} harus diisi`;
+        } else if (passenger.name.trim().length > 50) {
+          errors[`passenger_${index}_name`] = `Nama maksimal 50 karakter`;
         }
         if (!passenger.identityNumber?.trim()) {
           errors[`passenger_${index}_identity`] = `Identitas penumpang ${index + 2} harus diisi`;
+        } else if (passenger.identityNumber.trim().length > 20) {
+          errors[`passenger_${index}_identity`] = `Identitas maksimal 20 karakter`;
         }
       });
     }
-    
+
     if (!termsAccepted) {
       errors.terms = 'Anda harus menyetujui syarat dan ketentuan';
     }
-    
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -319,10 +329,11 @@ const BookingScreen = () => {
         placeholder="Nama Lengkap"
         placeholderTextColor={C.textMuted}
         value={isMain ? formData.fullName : passenger.name}
-        onChangeText={(text) => isMain 
+        onChangeText={(text) => isMain
           ? handleInputChange('fullName', text)
           : handleAdditionalPassengerChange(index, 'name', text)
         }
+        maxLength={50}
       />
       {validationErrors[isMain ? 'fullName' : `passenger_${index}_name`] && (
         <Text style={styles.errorText}>
@@ -336,11 +347,12 @@ const BookingScreen = () => {
           placeholder="Nomor Identitas"
           placeholderTextColor={C.textMuted}
           value={isMain ? formData.identityNumber : passenger.identityNumber}
-          onChangeText={(text) => isMain 
+          onChangeText={(text) => isMain
             ? handleInputChange('identityNumber', text)
             : handleAdditionalPassengerChange(index, 'identityNumber', text)
           }
           keyboardType="numeric"
+          maxLength={20}
         />
         {isMain && (
           <View style={styles.identityTypeButton}>
@@ -547,11 +559,12 @@ const BookingScreen = () => {
                 onChangeText={(text) => handleInputChange('email', text)}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                maxLength={50}
               />
               {validationErrors.email && (
                 <Text style={styles.errorText}>{validationErrors.email}</Text>
               )}
-              
+
               <TextInput
                 style={[styles.input, validationErrors.phone && styles.inputError]}
                 placeholder="Nomor Telepon"
@@ -559,6 +572,7 @@ const BookingScreen = () => {
                 value={formData.phone}
                 onChangeText={(text) => handleInputChange('phone', text)}
                 keyboardType="phone-pad"
+                maxLength={15}
               />
               {validationErrors.phone && (
                 <Text style={styles.errorText}>{validationErrors.phone}</Text>

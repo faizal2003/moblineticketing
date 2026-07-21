@@ -25,22 +25,31 @@ export default function RegisterScreen({ navigation }) {
     password_confirmation: '',
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const validate = () => {
+    const e = {};
+    if (!formData.name.trim()) e.name = 'Full name is required';
+    else if (formData.name.trim().length > 50) e.name = 'Nama maksimal 50 karakter';
+    if (!formData.email.trim()) e.email = 'Email is required';
+    else if (formData.email.length > 50) e.email = 'Email maksimal 50 karakter';
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) e.email = 'Invalid email format';
+    if (!formData.phone.trim()) e.phone = 'Phone number is required';
+    else if (formData.phone.length > 15) e.phone = 'Nomor HP maksimal 15 karakter';
+    if (!formData.password) e.password = 'Password is required';
+    else if (formData.password.length < 12) e.password = 'Password minimal 12 karakter';
+    else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/.test(formData.password))
+      e.password = 'Password harus mengandung huruf besar, huruf kecil, angka, dan simbol';
+    if (formData.password !== formData.password_confirmation)
+      e.password_confirmation = 'Passwords do not match';
+    setFieldErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const clearError = (field) => setFieldErrors(p => ({ ...p, [field]: null }));
 
   const handleRegister = async () => {
-    if (!formData.name || !formData.email || !formData.phone || !formData.password) {
-      Alert.alert('Error', 'Please fill all required fields');
-      return;
-    }
-
-    if (formData.password !== formData.password_confirmation) {
-      Alert.alert('Error', 'Passwords do not match');
-      return;
-    }
-
-    if (formData.password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters');
-      return;
-    }
+    if (!validate()) return;
 
     try {
       await dispatch(register({
@@ -55,16 +64,14 @@ export default function RegisterScreen({ navigation }) {
       );
     } catch (error) {
       if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        let errorMessage = '';
-        for (const field in errors) {
-          errorMessage += `${field}: ${errors[field].join(', ')}\n`;
+        const serverErrors = error.response.data.errors;
+        const mapped = {};
+        for (const field in serverErrors) {
+          mapped[field] = serverErrors[field].join(', ');
         }
-        Alert.alert('Registration Failed', errorMessage);
-      } else if (error.message) {
-        Alert.alert('Registration Failed', error.message);
+        setFieldErrors(mapped);
       } else {
-        Alert.alert('Registration Failed', 'Something went wrong');
+        setFieldErrors({ general: error.message || 'Something went wrong' });
       }
     }
   };
@@ -84,53 +91,59 @@ export default function RegisterScreen({ navigation }) {
 
         <View style={styles.form}>
           {/* Name Input */}
-          <View style={styles.inputContainer}>
+          <View style={[styles.inputContainer, fieldErrors.name && styles.inputContainerError]}>
             <MaterialIcons name="person" size={20} color="#666" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Full Name"
               placeholderTextColor="#999"
               value={formData.name}
-              onChangeText={(text) => setFormData({ ...formData, name: text })}
+              onChangeText={(text) => { setFormData({ ...formData, name: text }); clearError('name'); }}
+              maxLength={50}
             />
           </View>
+          {fieldErrors.name && <Text style={styles.fieldError}>{fieldErrors.name}</Text>}
 
           {/* Email Input */}
-          <View style={styles.inputContainer}>
+          <View style={[styles.inputContainer, fieldErrors.email && styles.inputContainerError]}>
             <MaterialIcons name="email" size={20} color="#666" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Email"
               placeholderTextColor="#999"
               value={formData.email}
-              onChangeText={(text) => setFormData({ ...formData, email: text })}
+              onChangeText={(text) => { setFormData({ ...formData, email: text }); clearError('email'); }}
               keyboardType="email-address"
               autoCapitalize="none"
+              maxLength={50}
             />
           </View>
+          {fieldErrors.email && <Text style={styles.fieldError}>{fieldErrors.email}</Text>}
 
           {/* Phone Input */}
-          <View style={styles.inputContainer}>
+          <View style={[styles.inputContainer, fieldErrors.phone && styles.inputContainerError]}>
             <MaterialIcons name="phone" size={20} color="#666" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Phone Number"
               placeholderTextColor="#999"
               value={formData.phone}
-              onChangeText={(text) => setFormData({ ...formData, phone: text })}
+              onChangeText={(text) => { setFormData({ ...formData, phone: text }); clearError('phone'); }}
               keyboardType="phone-pad"
+              maxLength={15}
             />
           </View>
+          {fieldErrors.phone && <Text style={styles.fieldError}>{fieldErrors.phone}</Text>}
 
           {/* Password Input */}
-          <View style={styles.inputContainer}>
+          <View style={[styles.inputContainer, fieldErrors.password && styles.inputContainerError]}>
             <MaterialIcons name="lock" size={20} color="#666" style={styles.inputIcon} />
             <TextInput
               style={[styles.input, { flex: 1 }]}
               placeholder="Password"
               placeholderTextColor="#999"
               value={formData.password}
-              onChangeText={(text) => setFormData({ ...formData, password: text })}
+              onChangeText={(text) => { setFormData({ ...formData, password: text }); clearError('password'); }}
               secureTextEntry={!showPassword}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
@@ -141,19 +154,23 @@ export default function RegisterScreen({ navigation }) {
               />
             </TouchableOpacity>
           </View>
+          {fieldErrors.password && <Text style={styles.fieldError}>{fieldErrors.password}</Text>}
 
           {/* Confirm Password Input */}
-          <View style={styles.inputContainer}>
+          <View style={[styles.inputContainer, fieldErrors.password_confirmation && styles.inputContainerError]}>
             <MaterialIcons name="lock-outline" size={20} color="#666" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Confirm Password"
               placeholderTextColor="#999"
               value={formData.password_confirmation}
-              onChangeText={(text) => setFormData({ ...formData, password_confirmation: text })}
+              onChangeText={(text) => { setFormData({ ...formData, password_confirmation: text }); clearError('password_confirmation'); }}
               secureTextEntry={!showPassword}
             />
           </View>
+          {fieldErrors.password_confirmation && <Text style={styles.fieldError}>{fieldErrors.password_confirmation}</Text>}
+
+          {fieldErrors.general && <Text style={styles.fieldError}>{fieldErrors.general}</Text>}
 
           {/* Register Button */}
           <TouchableOpacity
@@ -258,6 +275,12 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 14,
   },
+  inputContainerError: {
+    borderWidth: 1,
+    borderColor: '#F44336',
+    backgroundColor: '#FFF5F5',
+  },
+  fieldError: { color: '#F44336', fontSize: 12, marginTop: -10, marginBottom: 8, marginLeft: 4 },
   loginTextBold: {
     color: '#1E88E5',
     fontWeight: 'bold',

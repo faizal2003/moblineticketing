@@ -23,26 +23,33 @@ import { configureGoogleSignin } from '../../config/googleConfig';
 
 export default function LoginScreen({ navigation }) {
   const dispatch = useDispatch();
-  const { loading, error } = useSelector(state => state.auth);
+  const { loading } = useSelector(state => state.auth);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     configureGoogleSignin();
   }, []);
 
+  const validate = () => {
+    const e = {};
+    if (!email.trim()) e.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(email)) e.email = 'Invalid email format';
+    if (!password) e.password = 'Password is required';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill all fields');
-      return;
-    }
+    if (!validate()) return;
 
     try {
       await dispatch(login({ email, password })).unwrap();
     } catch (error) {
-      Alert.alert('Login Failed', error?.message || 'Something went wrong');
+      setErrors({ general: error?.message || 'Something went wrong' });
     }
   };
 
@@ -120,7 +127,7 @@ export default function LoginScreen({ navigation }) {
 
         <View style={styles.form}>
           {/* Email Input */}
-          <View style={styles.inputContainer}>
+          <View style={[styles.inputContainer, errors.email && styles.inputContainerError]}>
             <MaterialIcons
               name="email"
               size={20}
@@ -132,14 +139,15 @@ export default function LoginScreen({ navigation }) {
               placeholder="Email"
               placeholderTextColor="#999"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(t) => { setEmail(t); setErrors(p => ({ ...p, email: null })); }}
               keyboardType="email-address"
               autoCapitalize="none"
             />
           </View>
+          {errors.email && <Text style={styles.fieldError}>{errors.email}</Text>}
 
           {/* Password Input */}
-          <View style={styles.inputContainer}>
+          <View style={[styles.inputContainer, errors.password && styles.inputContainerError]}>
             <MaterialIcons
               name="lock"
               size={20}
@@ -151,7 +159,7 @@ export default function LoginScreen({ navigation }) {
               placeholder="Password"
               placeholderTextColor="#999"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(t) => { setPassword(t); setErrors(p => ({ ...p, password: null })); }}
               secureTextEntry={!showPassword}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
@@ -162,6 +170,7 @@ export default function LoginScreen({ navigation }) {
               />
             </TouchableOpacity>
           </View>
+          {errors.password && <Text style={styles.fieldError}>{errors.password}</Text>}
 
           {/* Login Button */}
           <TouchableOpacity
@@ -208,7 +217,7 @@ export default function LoginScreen({ navigation }) {
             </Text>
           </TouchableOpacity>
 
-          {error && <Text style={styles.errorText}>{error}</Text>}
+          {errors.general && <Text style={styles.errorText}>{errors.general}</Text>}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -279,5 +288,11 @@ const styles = StyleSheet.create({
   registerLink: { marginTop: 20, alignItems: 'center' },
   registerText: { color: '#666', fontSize: 14 },
   registerTextBold: { color: '#1E88E5', fontWeight: 'bold' },
+  inputContainerError: {
+    borderWidth: 1,
+    borderColor: '#F44336',
+    backgroundColor: '#FFF5F5',
+  },
+  fieldError: { color: '#F44336', fontSize: 12, marginTop: -10, marginBottom: 8, marginLeft: 4 },
   errorText: { color: '#F44336', textAlign: 'center', marginTop: 10 },
 });
